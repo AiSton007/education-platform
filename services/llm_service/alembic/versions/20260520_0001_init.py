@@ -11,6 +11,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 revision: str = "0001_llm_init"
@@ -19,20 +20,21 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 SCHEMA = "llm"
+analysis_status_enum = postgresql.ENUM(
+    "pending",
+    "processing",
+    "completed",
+    "failed",
+    name="analysis_status",
+    schema=SCHEMA,
+    create_type=False,
+)
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
     op.execute(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA}"')
-    op.execute(
-        f"""
-        DO $$ BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
-                           WHERE t.typname='analysis_status' AND n.nspname='{SCHEMA}') THEN
-                CREATE TYPE {SCHEMA}.analysis_status AS ENUM ('pending','processing','completed','failed');
-            END IF;
-        END $$;
-        """
-    )
+    analysis_status_enum.create(bind, checkfirst=True)
 
     op.create_table(
         "analyses",
@@ -41,15 +43,7 @@ def upgrade() -> None:
         sa.Column("user_id", UUID(as_uuid=True), nullable=False),
         sa.Column(
             "status",
-            sa.Enum(
-                "pending",
-                "processing",
-                "completed",
-                "failed",
-                name="analysis_status",
-                schema=SCHEMA,
-                create_type=False,
-            ),
+            analysis_status_enum,
             nullable=False,
             server_default="pending",
         ),
@@ -68,7 +62,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
     op.drop_index("ix_llm_analyses_user_id", table_name="analyses", schema=SCHEMA)
     op.drop_index("ix_llm_analyses_attempt_id", table_name="analyses", schema=SCHEMA)
     op.drop_table("analyses", schema=SCHEMA)
-    op.execute(f"DROP TYPE IF EXISTS {SCHEMA}.analysis_status")
+    analysis_status_enum.drop(bind, checkfirst=True)
