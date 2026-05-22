@@ -44,6 +44,16 @@ spec:
               value: {{ $root.Values.global.postgres.port | quote }}
             - name: DB_NAME
               value: {{ $root.Values.global.postgres.database | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.global.secrets.jwt.name }}
+                  key: JWT_SECRET
+            - name: INTERNAL_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.global.secrets.internalJwt.name }}
+                  key: INTERNAL_JWT_SECRET
             {{- range $k, $v := $svc.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
