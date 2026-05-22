@@ -268,4 +268,5 @@ PY
     failure {
         echo "Build failed at stage: ${env.STAGE_NAME}"
     }
+  }
 }
