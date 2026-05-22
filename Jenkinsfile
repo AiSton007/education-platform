@@ -442,7 +442,7 @@ for line in lines:
         out.append(f'{indent}tag: {sha}')
     else:
         out.append(line)
-path.write_text('\n'.join(out) + '\n')
+path.write_text('\\n'.join(out) + '\\n')
 PY
             git diff -- deploy/charts/education-platform/values.yaml
           '''
