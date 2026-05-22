@@ -67,6 +67,8 @@ spec:
 
   environment {
     HARBOR = 'harbor.mokryakov.local'
+    HARBOR_SCHEME = 'http'
+    HARBOR_PORT = '80'
     HARBOR_PROJECT = 'library'
     DEPLOY_REPO = 'git@github.com:AiSton007/education-platform.git'
     DEPLOY_BRANCH = 'master'
@@ -159,12 +161,13 @@ project = os.environ['HARBOR_PROJECT']
 user = os.environ['HARBOR_USER']
 password = os.environ['HARBOR_PASS']
 
+scheme = os.environ.get('HARBOR_SCHEME', 'http').lower()
 if ':' in harbor:
     host, port_raw = harbor.rsplit(':', 1)
     port = int(port_raw)
 else:
     host = harbor
-    port = 443
+    port = int(os.environ.get('HARBOR_PORT') or (443 if scheme == 'https' else 80))
 
 print(f'[CHECK] Harbor DNS: {host}')
 try:
@@ -182,7 +185,7 @@ except OSError as exc:
 print('[OK] Harbor TCP connection works')
 
 ctx = ssl._create_unverified_context()
-base_url = f'http://{harbor}'
+base_url = f'{scheme}://{harbor}'
 
 def request(path: str, auth: bool = False) -> int:
     req = urllib.request.Request(base_url + path)
@@ -375,7 +378,8 @@ EOF_AUTH
                 --destination "$HARBOR/$HARBOR_PROJECT/$image_name:$SHA" \
                 --cache=true \
                 --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
-                --skip-tls-verify-registry "$HARBOR"
+                --skip-tls-verify-registry "$HARBOR" \
+                --insecure-registry "$HARBOR"
 
               if [ "$service" != "api_gateway" ]; then
                 /kaniko/executor \
@@ -385,7 +389,8 @@ EOF_AUTH
                   --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:$SHA" \
                   --cache=true \
                   --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
-                  --skip-tls-verify-registry "$HARBOR"
+                  --skip-tls-verify-registry "$HARBOR" \
+                --insecure-registry "$HARBOR"
               fi
             done
           '''
@@ -411,7 +416,8 @@ EOF_AUTH
               --destination "$HARBOR/$HARBOR_PROJECT/frontend:$SHA" \
               --cache=true \
               --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
-              --skip-tls-verify-registry "$HARBOR"
+              --skip-tls-verify-registry "$HARBOR" \
+                --insecure-registry "$HARBOR"
           '''
         }
       }
@@ -423,11 +429,16 @@ EOF_AUTH
         container('python') {
           sh '''
             set -eux
+            cd "$WORKSPACE"
+            test -d .git || { echo "[FAIL] .git directory was not found in $WORKSPACE"; exit 2; }
+            git config --global --add safe.directory "$WORKSPACE"
+            test -f "$VALUES_FILE"
+
             python - <<'PY'
 import os
 from pathlib import Path
 
-path = Path('deploy/charts/education-platform/values.yaml')
+path = Path(os.environ['VALUES_FILE'])
 sha = os.environ['SHA']
 text = path.read_text()
 
@@ -444,7 +455,7 @@ for line in lines:
         out.append(line)
 path.write_text('\\n'.join(out) + '\\n')
 PY
-            git diff -- deploy/charts/education-platform/values.yaml
+            git -C "$WORKSPACE" diff -- "$VALUES_FILE" || true
           '''
         }
       }
@@ -457,6 +468,10 @@ PY
           withCredentials([sshUserPrivateKey(credentialsId: 'github-deploy-ssh', keyFileVariable: 'GIT_SSH_KEY')]) {
             sh '''
               set -eux
+              cd "$WORKSPACE"
+              test -d .git || { echo "[FAIL] .git directory was not found in $WORKSPACE"; exit 2; }
+              test -f "$VALUES_FILE"
+
               git config --global --add safe.directory "$WORKSPACE"
               git config user.email "jenkins@mokryakov.local"
               git config user.name "Jenkins"
@@ -464,6 +479,7 @@ PY
               mkdir -p ~/.ssh
               ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
               chmod 700 ~/.ssh
+              chmod 600 "$GIT_SSH_KEY" 2>/dev/null || true
 
               git remote set-url origin "$DEPLOY_REPO"
               git add "$VALUES_FILE"
@@ -474,7 +490,7 @@ PY
               fi
 
               git commit -m "ci: bump education-platform images to $SHA"
-              GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+              GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
                 git push origin HEAD:"$DEPLOY_BRANCH"
             '''
           }
