@@ -203,14 +203,28 @@ if status not in (200, 401):
     raise SystemExit(f'[FAIL] Unexpected Harbor /v2/ status: {status}, expected 200 or 401')
 print(f'[OK] Harbor /v2/ reachable, status={status}')
 
-print(f'[CHECK] Harbor credentials and project access: {project}')
-status = request(f'/api/v2.0/projects/{project}', auth=True)
-if status != 200:
+print('[CHECK] Harbor robot credentials against registry API: /v2/')
+status = request('/v2/', auth=True)
+if status not in (200,):
     raise SystemExit(
-        f'[FAIL] Harbor project check failed, status={status}. '
-        f'Check that project "{project}" exists and credential harbor-creds belongs to a robot account with access to this project.'
+        f'[FAIL] Harbor robot credentials check failed, status={status}. '
+        'Check credential harbor-creds: username must be robot$library+jenkins and password must be the robot secret/token.'
     )
-print('[OK] Harbor credentials and project access work')
+print('[OK] Harbor robot credentials accepted by registry API')
+
+print(f'[CHECK] Harbor project API visibility: {project}')
+status = request(f'/api/v2.0/projects/{project}', auth=True)
+if status == 200:
+    print('[OK] Harbor project API is visible to this credential')
+elif status == 403:
+    print(
+        '[WARN] Harbor project API returned 403 for the robot account. '
+        'This is acceptable for some Harbor robot accounts. The pipeline will continue; Kaniko push will be the real push-permission check.'
+    )
+elif status == 404:
+    raise SystemExit(f'[FAIL] Harbor project "{project}" was not found by Harbor API, status=404')
+else:
+    print(f'[WARN] Harbor project API returned unexpected status={status}. Continuing to Kaniko push check.')
 PY
             '''
           }
