@@ -182,7 +182,7 @@ except OSError as exc:
 print('[OK] Harbor TCP connection works')
 
 ctx = ssl._create_unverified_context()
-base_url = f'https://{harbor}'
+base_url = f'http://{harbor}'
 
 def request(path: str, auth: bool = False) -> int:
     req = urllib.request.Request(base_url + path)
@@ -195,7 +195,7 @@ def request(path: str, auth: bool = False) -> int:
     except urllib.error.HTTPError as exc:
         return exc.code
     except Exception as exc:
-        raise SystemExit(f'[FAIL] HTTPS request to {base_url}{path} failed: {exc}') from exc
+        raise SystemExit(f'[FAIL] HTTP request to {base_url}{path} failed: {exc}') from exc
 
 print('[CHECK] Harbor registry API: /v2/')
 status = request('/v2/')
