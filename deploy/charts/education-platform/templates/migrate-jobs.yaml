@@ -50,13 +50,13 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ dig "global" "secrets" "jwt" "name" "jwt-secret" $root.Values | quote }}
+                  name: "jwt-secret"
                   key: JWT_SECRET
                   optional: false
             - name: INTERNAL_JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ dig "global" "secrets" "internalJwt" "name" "internal-jwt-secret" $root.Values | quote }}
+                  name: "internal-jwt-secret"
                   key: INTERNAL_JWT_SECRET
                   optional: false
 
