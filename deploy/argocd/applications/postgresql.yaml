@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     repoURL: git@harbor.mokryakov.local:platform/education-platform-deploy.git
-    targetRevision: HEAD
+    targetRevision: master
     path: charts/postgresql
     helm:
       valueFiles: [values.yaml]
