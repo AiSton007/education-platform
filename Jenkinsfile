@@ -1,7 +1,7 @@
 // Jenkins pipeline for education-platform monorepo.
 // Kubernetes-native build: no Docker daemon is required on Jenkins or cluster nodes.
 // Required Jenkins credentials:
-//   harbor-creds      - Username/password for Harbor robot account with push/pull to education-platform
+//   harbor-creds      - Username/password for Harbor robot account with push/pull to the configured Harbor project
 //   github-deploy-ssh - SSH private key with write access to GitHub repo AiSton007/education-platform
 
 pipeline {
@@ -107,6 +107,135 @@ spec:
             }
 
             echo "Building image tag: ${env.SHA}"
+          }
+        }
+      }
+    }
+
+
+    stage('Preflight: repository layout') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        container('git') {
+          sh '''
+            set -eux
+            test -f Jenkinsfile
+            test -f Dockerfile
+            test -f Dockerfile.migrate
+            test -f "$VALUES_FILE"
+            test -d services/auth_service
+            test -d services/user_service
+            test -d services/test_service
+            test -d services/llm_service
+            test -d services/report_service
+            test -d services/api_gateway
+
+            if [ -d frontend ]; then
+              test -f frontend/package.json
+              test -f frontend/Dockerfile
+            fi
+          '''
+        }
+      }
+    }
+
+    stage('Preflight: infrastructure access') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      steps {
+        container('python') {
+          withCredentials([usernamePassword(credentialsId: 'harbor-creds', usernameVariable: 'HARBOR_USER', passwordVariable: 'HARBOR_PASS')]) {
+            sh '''
+              set -eu
+              python - <<'PY'
+import base64
+import os
+import socket
+import ssl
+import urllib.error
+import urllib.request
+
+harbor = os.environ['HARBOR']
+project = os.environ['HARBOR_PROJECT']
+user = os.environ['HARBOR_USER']
+password = os.environ['HARBOR_PASS']
+
+if ':' in harbor:
+    host, port_raw = harbor.rsplit(':', 1)
+    port = int(port_raw)
+else:
+    host = harbor
+    port = 443
+
+print(f'[CHECK] Harbor DNS: {host}')
+try:
+    addresses = sorted({item[4][0] for item in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)})
+except socket.gaierror as exc:
+    raise SystemExit(f'[FAIL] Harbor DNS resolution failed for {host}: {exc}') from exc
+print(f'[OK] Harbor resolves to: {", ".join(addresses)}')
+
+print(f'[CHECK] Harbor TCP: {host}:{port}')
+try:
+    with socket.create_connection((host, port), timeout=8):
+        pass
+except OSError as exc:
+    raise SystemExit(f'[FAIL] Cannot connect to Harbor {host}:{port}: {exc}') from exc
+print('[OK] Harbor TCP connection works')
+
+ctx = ssl._create_unverified_context()
+base_url = f'https://{harbor}'
+
+def request(path: str, auth: bool = False) -> int:
+    req = urllib.request.Request(base_url + path)
+    if auth:
+        token = base64.b64encode(f'{user}:{password}'.encode()).decode()
+        req.add_header('Authorization', f'Basic {token}')
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=12) as response:
+            return response.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except Exception as exc:
+        raise SystemExit(f'[FAIL] HTTPS request to {base_url}{path} failed: {exc}') from exc
+
+print('[CHECK] Harbor registry API: /v2/')
+status = request('/v2/')
+if status not in (200, 401):
+    raise SystemExit(f'[FAIL] Unexpected Harbor /v2/ status: {status}, expected 200 or 401')
+print(f'[OK] Harbor /v2/ reachable, status={status}')
+
+print(f'[CHECK] Harbor credentials and project access: {project}')
+status = request(f'/api/v2.0/projects/{project}', auth=True)
+if status != 200:
+    raise SystemExit(
+        f'[FAIL] Harbor project check failed, status={status}. '
+        f'Check that project "{project}" exists and credential harbor-creds belongs to a robot account with access to this project.'
+    )
+print('[OK] Harbor credentials and project access work')
+PY
+            '''
+          }
+        }
+
+        container('git') {
+          withCredentials([sshUserPrivateKey(credentialsId: 'github-deploy-ssh', keyFileVariable: 'GIT_SSH_KEY')]) {
+            sh '''
+              set -eu
+              mkdir -p ~/.ssh
+              ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+              chmod 700 ~/.ssh
+
+              set +e
+              OUT=$(GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o UserKnownHostsFile=$HOME/.ssh/known_hosts" ssh -T git@github.com 2>&1)
+              RC=$?
+              set -e
+              echo "$OUT"
+
+              echo "$OUT" | grep -q "successfully authenticated" || {
+                echo "[FAIL] GitHub SSH deploy key check failed with rc=$RC"
+                exit 1
+              }
+              echo "[OK] GitHub SSH deploy key works"
+            '''
           }
         }
       }
