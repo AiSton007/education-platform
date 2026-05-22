@@ -12,6 +12,15 @@ postgresql:
   fullnameOverride: education-postgresql
   architecture: standalone
 
+  # The default image tag from the Bitnami chart may point to an unavailable old tag.
+  # Pin to a currently resolvable major tag for the first cluster deployment.
+  # Later this image can be mirrored to Harbor and switched to harbor.mokryakov.local:443.
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    tag: "16"
+    pullPolicy: IfNotPresent
+
   auth:
     postgresPassword: postgres
     username: education
