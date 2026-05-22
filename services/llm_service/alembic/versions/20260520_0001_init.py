@@ -20,10 +20,14 @@ SCHEMA = "llm"
 
 
 def upgrade() -> None:
-
+    # Создаём схему отдельно. IF NOT EXISTS нужен, потому что при падении Job
+    # часть объектов могла уже появиться в базе после прошлых попыток миграции.
     op.execute(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA}"')
 
-
+    # Не используем sqlalchemy.dialects.postgresql.ENUM внутри op.create_table,
+    # потому что SQLAlchemy/Alembic может повторно попытаться выполнить
+    # CREATE TYPE при создании таблицы. Для ArgoCD hook Job это критично:
+    # при повторном запуске миграции enum может уже существовать.
     op.execute(
         f"""
         DO $$
