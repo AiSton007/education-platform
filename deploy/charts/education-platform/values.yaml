@@ -1,5 +1,5 @@
 global:
-  imageRegistry: harbor.mokryakov.local:443/education-platform
+  imageRegistry: harbor.mokryakov.local/library
 
   imagePullSecrets:
     - name: harbor-pull-secret
@@ -161,6 +161,7 @@ services:
       pullPolicy: IfNotPresent
     migrate:
       enabled: false
+    db: {}
     env:
       SERVICE_NAME: api-gateway
       AUTH_SERVICE_URL: http://auth-service:8080
