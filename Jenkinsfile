@@ -260,10 +260,12 @@ PY
 
   post {
     always {
-      junit allowEmptyResults: true, testResults: 'reports/junit/**/*.xml'
+        echo "Pipeline finished"
+    }
+    success {
+        echo "Build completed successfully"
     }
     failure {
-      echo "Build failed at stage: ${env.STAGE_NAME}"
+        echo "Build failed at stage: ${env.STAGE_NAME}"
     }
-  }
 }
