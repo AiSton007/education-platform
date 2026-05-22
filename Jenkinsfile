@@ -271,7 +271,27 @@ PY
             rm -rf /var/lib/apt/lists/*
             pip install --no-cache-dir uv==0.5.4
             uv --version
-            uv sync --all-extras
+            # Increase sync timeout and retry transient network failures.
+            # "timeout" keeps the stage from hanging forever on package index calls.
+            max_attempts=4
+            attempt=1
+            while [ "$attempt" -le "$max_attempts" ]; do
+              echo "uv sync attempt ${attempt}/${max_attempts}"
+              if timeout 20m uv sync --all-extras; then
+                echo "uv sync succeeded"
+                break
+              fi
+
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "uv sync failed after ${max_attempts} attempts"
+                exit 1
+              fi
+
+              sleep_seconds=$((attempt * 20))
+              echo "uv sync failed, retrying in ${sleep_seconds}s..."
+              sleep "$sleep_seconds"
+              attempt=$((attempt + 1))
+            done
           '''
         }
       }
