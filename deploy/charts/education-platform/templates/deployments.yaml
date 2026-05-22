@@ -1,0 +1,129 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "ep.labels" (dict "name" $name "root" $root) | nindent 4 }}
+spec:
+  replicas: {{ default $root.Values.defaults.replicaCount $svc.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ep.selectorLabels" (dict "name" $name "root" $root) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ep.selectorLabels" (dict "name" $name "root" $root) | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ $root.Values.global.serviceAccount.name }}
+      securityContext:
+        {{- toYaml $root.Values.defaults.securityContext | nindent 8 }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "ep.image" (dict "image" $svc.image "root" $root) }}
+          imagePullPolicy: {{ default "IfNotPresent" $svc.image.pullPolicy }}
+          securityContext:
+            {{- toYaml $root.Values.defaults.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_PORT
+              value: "8080"
+            - name: DB_HOST
+              value: {{ $root.Values.global.postgres.host | quote }}
+            - name: DB_PORT
+              value: {{ $root.Values.global.postgres.port | quote }}
+            - name: DB_NAME
+              value: {{ $root.Values.global.postgres.database | quote }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.global.secrets.jwt.name }}
+                  key: JWT_SECRET
+                  optional: true
+            - name: INTERNAL_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.global.secrets.internalJwt.name }}
+                  key: INTERNAL_JWT_SECRET
+            {{- range $k, $v := $svc.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          envFrom:
+            {{- if $svc.db.existingSecret }}
+            - secretRef:
+                name: {{ $svc.db.existingSecret }}
+            {{- end }}
+            {{- range $svc.extraEnvFrom }}
+            - {{ toYaml . | nindent 14 | trim }}
+            {{- end }}
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            {{- toYaml $root.Values.defaults.probes.liveness | nindent 12 }}
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            {{- toYaml $root.Values.defaults.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml ($svc.resources | default $root.Values.defaults.resources) | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}
+{{- end }}
+{{- if .Values.frontend.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ep.labels" (dict "name" "frontend" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ep.selectorLabels" (dict "name" "frontend" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ep.selectorLabels" (dict "name" "frontend" "root" .) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccount.name }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+      containers:
+        - name: frontend
+          image: {{ include "ep.image" (dict "image" .Values.frontend.image "root" .) }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
+{{- end }}

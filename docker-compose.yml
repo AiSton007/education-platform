@@ -1,0 +1,206 @@
+# Local development stack.
+# Bring everything up:
+#   docker compose --profile migrate up    # one-shot: run migrations
+#   docker compose up -d                   # backend + frontend
+# Tear down with volumes:
+#   docker compose down -v
+
+x-py-env: &py_env
+  APP_ENV: development
+  LOG_LEVEL: info
+  METRICS_ENABLED: "true"
+  CORS_ALLOW_ORIGINS: "http://localhost:13000,http://localhost:18080"
+
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: education
+  DB_SSL_MODE: disable
+  DB_MAX_OPEN_CONNS: "10"
+  DB_MAX_IDLE_CONNS: "2"
+  DB_CONN_MAX_LIFETIME: "300"
+
+  JWT_SECRET: ${JWT_SECRET:-dev-please-rotate-in-secret}
+  JWT_ACCESS_TOKEN_TTL: "900"
+  JWT_REFRESH_TOKEN_TTL: "604800"
+  JWT_ISSUER: education-platform
+
+  INTERNAL_JWT_SECRET: ${INTERNAL_JWT_SECRET:-dev-internal-please-rotate}
+  INTERNAL_JWT_TTL: "300"
+
+  AUTH_SERVICE_URL: http://auth-service:8080
+  USER_SERVICE_URL: http://user-service:8080
+  TEST_SERVICE_URL: http://test-service:8080
+  LLM_SERVICE_URL: http://llm-service:8080
+  REPORT_SERVICE_URL: http://report-service:8080
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: education
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d education"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # --- migrate jobs (profile=migrate) -----------------------------------------
+  auth-migrate:
+    profiles: ["migrate"]
+    build: { context: ., dockerfile: Dockerfile.migrate, args: { SERVICE: auth_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: auth-service
+      DB_SCHEMA: auth
+      DB_USER: ${AUTH_DB_USER:-auth_user}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  user-migrate:
+    profiles: ["migrate"]
+    build: { context: ., dockerfile: Dockerfile.migrate, args: { SERVICE: user_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: user-service
+      DB_SCHEMA: users
+      DB_USER: ${USER_DB_USER:-users_user}
+      DB_PASSWORD: ${USER_DB_PASSWORD:-users_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  test-migrate:
+    profiles: ["migrate"]
+    build: { context: ., dockerfile: Dockerfile.migrate, args: { SERVICE: test_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: test-service
+      DB_SCHEMA: tests
+      DB_USER: ${TEST_DB_USER:-tests_user}
+      DB_PASSWORD: ${TEST_DB_PASSWORD:-tests_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  llm-migrate:
+    profiles: ["migrate"]
+    build: { context: ., dockerfile: Dockerfile.migrate, args: { SERVICE: llm_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: llm-service
+      DB_SCHEMA: llm
+      DB_USER: ${LLM_DB_USER:-llm_user}
+      DB_PASSWORD: ${LLM_DB_PASSWORD:-llm_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  report-migrate:
+    profiles: ["migrate"]
+    build: { context: ., dockerfile: Dockerfile.migrate, args: { SERVICE: report_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: report-service
+      DB_SCHEMA: reports
+      DB_USER: ${REPORT_DB_USER:-reports_user}
+      DB_PASSWORD: ${REPORT_DB_PASSWORD:-reports_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # --- services ---------------------------------------------------------------
+  auth-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: auth_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: auth-service
+      DB_SCHEMA: auth
+      DB_USER: ${AUTH_DB_USER:-auth_user}
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz').read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  user-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: user_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: user-service
+      DB_SCHEMA: users
+      DB_USER: ${USER_DB_USER:-users_user}
+      DB_PASSWORD: ${USER_DB_PASSWORD:-users_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  test-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: test_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: test-service
+      DB_SCHEMA: tests
+      DB_USER: ${TEST_DB_USER:-tests_user}
+      DB_PASSWORD: ${TEST_DB_PASSWORD:-tests_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  llm-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: llm_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: llm-service
+      DB_SCHEMA: llm
+      DB_USER: ${LLM_DB_USER:-llm_user}
+      DB_PASSWORD: ${LLM_DB_PASSWORD:-llm_pass_change_me}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_API_URL: ${LLM_API_URL:-https://gigachat.devices.sberbank.ru/api/v1}
+      LLM_OAUTH_URL: ${LLM_OAUTH_URL:-https://ngw.devices.sberbank.ru:9443/api/v2/oauth}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-GigaChat}
+      LLM_TIMEOUT_SECONDS: "30"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  report-service:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: report_service } }
+    environment:
+      <<: *py_env
+      APP_NAME: report-service
+      DB_SCHEMA: reports
+      DB_USER: ${REPORT_DB_USER:-reports_user}
+      DB_PASSWORD: ${REPORT_DB_PASSWORD:-reports_pass_change_me}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api-gateway:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: api_gateway } }
+    environment:
+      <<: *py_env
+      APP_NAME: api-gateway
+    ports:
+      - "18080:8080"
+    depends_on:
+      - auth-service
+      - user-service
+      - test-service
+      - report-service
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:18080
+    ports:
+      - "13000:8080"
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres-data: {}

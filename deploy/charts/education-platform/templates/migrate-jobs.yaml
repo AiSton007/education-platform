@@ -1,0 +1,53 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- if and $svc.enabled $svc.migrate.enabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}-migrate
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "ep.labels" (dict "name" $name "root" $root) | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "ep.selectorLabels" (dict "name" $name "root" $root) | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ $root.Values.global.serviceAccount.name }}
+      securityContext:
+        {{- toYaml $root.Values.defaults.securityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ include "ep.image" (dict "image" $svc.migrate.image "root" $root) }}
+          securityContext:
+            {{- toYaml $root.Values.defaults.containerSecurityContext | nindent 12 }}
+          env:
+            - name: DB_HOST
+              value: {{ $root.Values.global.postgres.host | quote }}
+            - name: DB_PORT
+              value: {{ $root.Values.global.postgres.port | quote }}
+            - name: DB_NAME
+              value: {{ $root.Values.global.postgres.database | quote }}
+            {{- range $k, $v := $svc.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ $svc.db.existingSecret }}
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits:   { cpu: 300m, memory: 256Mi }
+{{- end }}
+{{- end }}

@@ -1,0 +1,62 @@
+# Values for the standalone PostgreSQL release.
+
+# Per-service DB passwords are templated into the bootstrap SQL.
+# In production they must be overridden via values-prod.yaml (sourced from a secret manager).
+passwords:
+  postgres: postgres
+  auth: auth_pass_change_me
+  users: users_pass_change_me
+  tests: tests_pass_change_me
+  llm: llm_pass_change_me
+  reports: reports_pass_change_me
+
+postgresql:
+  fullnameOverride: education-postgresql
+  global:
+    postgresql:
+      auth:
+        postgresPassword: postgres
+        username: education
+        password: education_app
+        database: education
+  primary:
+    persistence:
+      enabled: true
+      storageClass: nfs-client
+      size: 10Gi
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 1000m, memory: 1Gi }
+    initdb:
+      scripts:
+        00-roles.sql: |
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='auth_user')    THEN CREATE ROLE auth_user    LOGIN PASSWORD 'auth_pass_change_me'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='users_user')   THEN CREATE ROLE users_user   LOGIN PASSWORD 'users_pass_change_me'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='tests_user')   THEN CREATE ROLE tests_user   LOGIN PASSWORD 'tests_pass_change_me'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='llm_user')     THEN CREATE ROLE llm_user     LOGIN PASSWORD 'llm_pass_change_me'; END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='reports_user') THEN CREATE ROLE reports_user LOGIN PASSWORD 'reports_pass_change_me'; END IF;
+          END $$;
+
+          \c education
+          CREATE SCHEMA IF NOT EXISTS auth    AUTHORIZATION auth_user;
+          CREATE SCHEMA IF NOT EXISTS users   AUTHORIZATION users_user;
+          CREATE SCHEMA IF NOT EXISTS tests   AUTHORIZATION tests_user;
+          CREATE SCHEMA IF NOT EXISTS llm     AUTHORIZATION llm_user;
+          CREATE SCHEMA IF NOT EXISTS reports AUTHORIZATION reports_user;
+
+          GRANT CONNECT ON DATABASE education TO auth_user, users_user, tests_user, llm_user, reports_user;
+  serviceAccount:
+    create: true
+  metrics:
+    enabled: false
+
+# Generate per-service connection secrets.
+appSecrets:
+  enabled: true
+
+# NetworkPolicy: only allow ingress from namespace=app.
+networkPolicy:
+  enabled: true
+  appNamespace: app

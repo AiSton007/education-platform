@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Отчёт по тестированию</title>
+  <style>
+    body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 880px; margin: 2rem auto; padding: 0 1.5rem; color: #1f2933; }
+    h1 { font-size: 1.6rem; border-bottom: 2px solid #e2e8f0; padding-bottom: .5rem; }
+    .meta { color: #52606d; font-size: .9rem; margin-bottom: 1.5rem; }
+    .score { display: inline-block; padding: .3rem .8rem; border-radius: 999px; background: #d6e4ff; font-weight: 600; }
+    section { margin: 1.5rem 0; }
+    h2 { font-size: 1.15rem; margin-bottom: .5rem; }
+    ul { margin: 0; padding-left: 1.4rem; }
+    li { margin-bottom: .35rem; }
+    .reco { border: 1px solid #e2e8f0; border-radius: 8px; padding: .8rem 1rem; margin-bottom: .8rem; }
+    .reco .topic { font-weight: 600; }
+    .reco a { color: #1e40af; }
+  </style>
+</head>
+<body>
+  <h1>Отчёт по тестированию</h1>
+  <div class="meta">
+    <div>Report ID: <code>{{ report.id }}</code></div>
+    <div>Attempt: <code>{{ report.attempt_id }}</code></div>
+    <div>User: <code>{{ report.user_id }}</code></div>
+    <div>Дата: {{ report.created_at }}</div>
+    <div>Оценка: <span class="score">{{ "%.1f"|format(report.score) }}/100</span></div>
+  </div>
+
+  {% if data.strengths %}
+  <section>
+    <h2>Сильные стороны</h2>
+    <ul>{% for s in data.strengths %}<li>{{ s }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if data.weaknesses %}
+  <section>
+    <h2>Слабые стороны</h2>
+    <ul>{% for w in data.weaknesses %}<li>{{ w }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if report.recommendations %}
+  <section>
+    <h2>Что изучить</h2>
+    {% for r in report.recommendations %}
+      <div class="reco">
+        <div class="topic">{{ r.topic }}</div>
+        <div>{{ r.reason }}</div>
+        {% if r.resource_url %}<div><a href="{{ r.resource_url }}">{{ r.resource_url }}</a></div>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+</body>
+</html>
