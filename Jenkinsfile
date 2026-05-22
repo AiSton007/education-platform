@@ -74,18 +74,34 @@ spec:
     VALUES_FILE = 'deploy/charts/education-platform/values.yaml'
   }
 
-  stages {
-    stage('Checkout') {
-      steps {
-        container('git') {
-          checkout scm
-          script {
-            env.SHA = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
-          }
-          echo "Building image tag: ${env.SHA}"
+  stage('Checkout') {
+  steps {
+    container('git') {
+      checkout scm
+
+      sh '''
+        git config --global --add safe.directory "$WORKSPACE"
+        mkdir -p ~/.ssh
+        ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+      '''
+
+      script {
+        env.SHA = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+        env.LAST_COMMIT_MSG = sh(returnStdout: true, script: 'git log -1 --pretty=%s').trim()
+
+        if (env.LAST_COMMIT_MSG.startsWith('ci: bump education-platform images')) {
+          env.SKIP_PIPELINE = 'true'
+          currentBuild.description = 'Skipped deploy-only image tag commit'
+          echo 'Skipping build: this commit only updates Helm image tags.'
+        } else {
+          env.SKIP_PIPELINE = 'false'
         }
+
+        echo "Building image tag: ${env.SHA}"
       }
     }
+    }
+  }
 
     stage('Install Python dependencies') {
       steps {
