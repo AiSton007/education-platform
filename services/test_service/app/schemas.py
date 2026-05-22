@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from services.test_service.app.models import AttemptStatus, QuestionType
 
-
 # ----- tests -----
+
 
 class OptionIn(BaseModel):
     order: int = Field(ge=0)
@@ -37,7 +37,7 @@ class OptionOut(BaseModel):
     id: uuid.UUID
     order: int
     text: str
-    # ``is_correct`` намеренно НЕ возвращается на /tests/{id} для employee'ев — это решается на уровне роутера.
+    # ``is_correct`` is intentionally hidden from employee-facing /tests/{id} responses.
 
 
 class OptionAdminOut(OptionOut):
@@ -81,6 +81,7 @@ class TestsList(BaseModel):
 
 
 # ----- attempts -----
+
 
 class AnswerIn(BaseModel):
     question_id: uuid.UUID

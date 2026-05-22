@@ -52,9 +52,7 @@ def upgrade() -> None:
         sa.Column("reason", sa.Text, nullable=False),
         schema=SCHEMA,
     )
-    op.create_index(
-        "ix_reports_recommendations_report_id", "recommendations", ["report_id"], schema=SCHEMA
-    )
+    op.create_index("ix_reports_recommendations_report_id", "recommendations", ["report_id"], schema=SCHEMA)
 
 
 def downgrade() -> None:

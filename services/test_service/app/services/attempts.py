@@ -168,7 +168,6 @@ def _question_payload(q: Question) -> dict:
     }
     if q.type in (QuestionType.SINGLE, QuestionType.MULTIPLE):
         base["options"] = [
-            {"id": str(o.id), "order": o.order, "text": o.text, "is_correct": o.is_correct}
-            for o in q.options
+            {"id": str(o.id), "order": o.order, "text": o.text, "is_correct": o.is_correct} for o in q.options
         ]
     return base

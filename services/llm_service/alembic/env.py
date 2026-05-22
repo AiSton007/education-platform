@@ -23,10 +23,8 @@ config.set_main_option("sqlalchemy.url", settings.async_dsn)
 target_metadata = Base.metadata
 
 
-def include_object(obj, name, type_, reflected, compare_to) -> bool:  # noqa: ANN001
-    if type_ == "table" and getattr(obj, "schema", None) not in (None, SCHEMA):
-        return False
-    return True
+def include_object(obj, name, type_, reflected, compare_to) -> bool:
+    return type_ != "table" or getattr(obj, "schema", None) in (None, SCHEMA)
 
 
 def run_migrations_offline() -> None:

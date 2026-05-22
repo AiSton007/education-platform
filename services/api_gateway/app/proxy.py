@@ -68,9 +68,7 @@ class HttpProxy:
         if request.url.query:
             url = f"{url}?{request.url.query}"
 
-        headers = {
-            k: v for k, v in request.headers.items() if k.lower() not in _HOP_BY_HOP
-        }
+        headers = {k: v for k, v in request.headers.items() if k.lower() not in _HOP_BY_HOP}
         rid = get_request_id()
         if rid:
             headers["X-Request-Id"] = rid
@@ -91,9 +89,7 @@ class HttpProxy:
                 details={"upstream": upstream_base, "path": request.url.path},
             ) from exc
 
-        response_headers = {
-            k: v for k, v in upstream.headers.items() if k.lower() not in _HOP_BY_HOP
-        }
+        response_headers = {k: v for k, v in upstream.headers.items() if k.lower() not in _HOP_BY_HOP}
         return Response(
             content=upstream.content,
             status_code=upstream.status_code,

@@ -117,9 +117,7 @@ def _serialize(report) -> ReportOut:
         data=report.data,
         created_at=report.created_at,
         recommendations=[
-            RecommendationOut(
-                id=r.id, topic=r.topic, resource_url=r.resource_url, reason=r.reason
-            )
+            RecommendationOut(id=r.id, topic=r.topic, resource_url=r.resource_url, reason=r.reason)
             for r in report.recommendations
         ],
     )

@@ -7,7 +7,7 @@ user-service), login, refresh, and identity look-up.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,7 +89,7 @@ class AuthService:
         stored = await self._refresh.get_by_jti(jti)
         if stored is None or stored.revoked_at is not None:
             raise Unauthorized("Refresh token is not active")
-        if stored.expires_at <= datetime.now(timezone.utc):
+        if stored.expires_at <= datetime.now(UTC):
             raise Unauthorized("Refresh token expired")
 
         user = await self._users.get_by_id(uuid.UUID(str(payload["sub"])))
@@ -115,8 +115,8 @@ class AuthService:
         )
         refresh, jti = issue_refresh_token(self._settings, user_id=str(user.id))
         expires_at = datetime.fromtimestamp(
-            datetime.now(timezone.utc).timestamp() + self._settings.jwt_refresh_token_ttl,
-            tz=timezone.utc,
+            datetime.now(UTC).timestamp() + self._settings.jwt_refresh_token_ttl,
+            tz=UTC,
         )
         await self._refresh.create(user_id=user.id, jti=jti, expires_at=expires_at)
         return (

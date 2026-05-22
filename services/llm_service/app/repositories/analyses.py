@@ -13,9 +13,7 @@ class AnalysisRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create_pending(
-        self, *, attempt_id: uuid.UUID, user_id: uuid.UUID, provider: str
-    ) -> Analysis:
+    async def create_pending(self, *, attempt_id: uuid.UUID, user_id: uuid.UUID, provider: str) -> Analysis:
         analysis = Analysis(
             attempt_id=attempt_id,
             user_id=user_id,

@@ -34,9 +34,7 @@ class UserServiceClient:
             "position": position,
             "role": role,
         }
-        async with internal_client(
-            self._base_url, audience="user-service", issuer=self._issuer
-        ) as client:
+        async with internal_client(self._base_url, audience="user-service", issuer=self._issuer) as client:
             response = await client.post("/api/v1/users/internal", json=payload)
             if response.status_code not in (200, 201, 409):
                 # 409 is treated as idempotent success — profile already exists

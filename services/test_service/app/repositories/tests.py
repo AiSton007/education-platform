@@ -32,9 +32,7 @@ class TestRepository:
                 weight=q["weight"],
             )
             for o in q.get("options", []):
-                question.options.append(
-                    Option(order=o["order"], text=o["text"], is_correct=o["is_correct"])
-                )
+                question.options.append(Option(order=o["order"], text=o["text"], is_correct=o["is_correct"]))
             test.questions.append(question)
         self._session.add(test)
         await self._session.flush()

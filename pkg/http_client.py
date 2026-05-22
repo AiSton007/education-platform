@@ -38,7 +38,7 @@ class InternalClient:
         self._timeout = timeout or DEFAULT_TIMEOUT
         self._client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self) -> "InternalClient":
+    async def __aenter__(self) -> InternalClient:
         self._client = httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout)
         return self
 
@@ -83,7 +83,11 @@ class InternalClient:
         if response.status_code >= 500:
             raise UpstreamError(
                 message=f"Upstream {self._audience} returned {response.status_code}",
-                details={"target": self._audience, "status": response.status_code, "body": response.text[:500]},
+                details={
+                    "target": self._audience,
+                    "status": response.status_code,
+                    "body": response.text[:500],
+                },
             )
         return response
 
@@ -105,10 +109,10 @@ async def internal_client(
     base_url: str,
     audience: str,
     issuer: InternalIssuer,
-    timeout: httpx.Timeout | float | None = None,
+    request_timeout: httpx.Timeout | float | None = None,
 ):
     """Convenience async context manager wrapping :class:`InternalClient`."""
     async with InternalClient(
-        base_url=base_url, audience=audience, issuer=issuer, timeout=timeout
+        base_url=base_url, audience=audience, issuer=issuer, timeout=request_timeout
     ) as client:
         yield client

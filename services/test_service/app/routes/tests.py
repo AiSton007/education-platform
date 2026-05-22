@@ -79,10 +79,7 @@ async def get_test(
                 type=q.type,
                 text=q.text,
                 weight=float(q.weight),
-                options=[
-                    OptionOut(id=o.id, order=o.order, text=o.text)
-                    for o in q.options
-                ],
+                options=[OptionOut(id=o.id, order=o.order, text=o.text) for o in q.options],
             )
             for q in test.questions
         ],

@@ -18,7 +18,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 SCHEMA = "tests"
@@ -59,7 +59,7 @@ class Test(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    questions: Mapped[list["Question"]] = relationship(
+    questions: Mapped[list[Question]] = relationship(
         back_populates="test",
         cascade="all, delete-orphan",
         order_by="Question.order",
@@ -81,7 +81,7 @@ class Question(Base):
     weight: Mapped[float] = mapped_column(Numeric(6, 2), default=1.0, nullable=False)
 
     test: Mapped[Test] = relationship(back_populates="questions")
-    options: Mapped[list["Option"]] = relationship(
+    options: Mapped[list[Option]] = relationship(
         back_populates="question",
         cascade="all, delete-orphan",
         order_by="Option.order",
@@ -129,7 +129,7 @@ class Attempt(Base):
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    answers: Mapped[list["Answer"]] = relationship(
+    answers: Mapped[list[Answer]] = relationship(
         back_populates="attempt",
         cascade="all, delete-orphan",
     )
@@ -146,7 +146,10 @@ class Answer(Base):
         index=True,
     )
     question_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
-    selected_option_ids: Mapped[list[uuid.UUID] | None] = mapped_column(ARRAY(UUID(as_uuid=True)), nullable=True)
+    selected_option_ids: Mapped[list[uuid.UUID] | None] = mapped_column(
+        ARRAY(UUID(as_uuid=True)),
+        nullable=True,
+    )
     free_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     answered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

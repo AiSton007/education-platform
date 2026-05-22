@@ -44,7 +44,5 @@ class ReportsService:
             raise NotFound("Report not found")
         return report
 
-    async def list_by_user(
-        self, user_id: uuid.UUID, *, limit: int, offset: int
-    ) -> tuple[list[Report], int]:
+    async def list_by_user(self, user_id: uuid.UUID, *, limit: int, offset: int) -> tuple[list[Report], int]:
         return await self._repo.list_by_user(user_id, limit=limit, offset=offset)

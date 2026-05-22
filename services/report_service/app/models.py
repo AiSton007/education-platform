@@ -31,7 +31,7 @@ class Report(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    recommendations: Mapped[list["Recommendation"]] = relationship(
+    recommendations: Mapped[list[Recommendation]] = relationship(
         back_populates="report", cascade="all, delete-orphan"
     )
 

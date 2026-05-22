@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import SettingsConfigDict
 
 from pkg.config import BaseAppSettings, DatabaseSettings, InternalJWTSettings, JWTSettings
 

@@ -34,9 +34,7 @@ class GigaChatAnalyzer:
         self._settings = settings
         self._token: str | None = None
         self._token_expires_at: float = 0.0
-        self._client = httpx.AsyncClient(
-            timeout=settings.llm_timeout_seconds, verify=settings.llm_verify_ssl
-        )
+        self._client = httpx.AsyncClient(timeout=settings.llm_timeout_seconds, verify=settings.llm_verify_ssl)
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -54,9 +52,7 @@ class GigaChatAnalyzer:
         }
         data = {"scope": self._settings.llm_oauth_scope}
         try:
-            response = await self._client.post(
-                self._settings.llm_oauth_url, headers=headers, data=data
-            )
+            response = await self._client.post(self._settings.llm_oauth_url, headers=headers, data=data)
         except httpx.RequestError as exc:
             raise UpstreamError("GigaChat OAuth request failed", details={"err": str(exc)}) from exc
 

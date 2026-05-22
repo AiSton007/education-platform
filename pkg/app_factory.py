@@ -134,7 +134,7 @@ def create_app(
         for check in checks:
             try:
                 await check()
-            except Exception as exc:  # noqa: BLE001 — surface readiness error message
+            except Exception as exc:
                 failures.append(str(exc))
         if failures:
             return JSONResponse(

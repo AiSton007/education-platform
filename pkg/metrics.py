@@ -13,16 +13,13 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 def instrument(app: FastAPI, service_name: str) -> Instrumentator:
     """Attach default RED metrics + expose ``/metrics``."""
-    instrumentator = (
-        Instrumentator(
-            should_group_status_codes=True,
-            should_ignore_untemplated=True,
-            should_respect_env_var=False,
-            inprogress_name="http_requests_in_progress",
-            inprogress_labels=True,
-        )
-        .add(_default_request_counter(service_name))
-    )
+    instrumentator = Instrumentator(
+        should_group_status_codes=True,
+        should_ignore_untemplated=True,
+        should_respect_env_var=False,
+        inprogress_name="http_requests_in_progress",
+        inprogress_labels=True,
+    ).add(_default_request_counter(service_name))
     instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
     return instrumentator
 

@@ -34,9 +34,7 @@ class ReportRepository:
         )
         for r in recommendations:
             report.recommendations.append(
-                Recommendation(
-                    topic=r["topic"], resource_url=r.get("resource_url"), reason=r["reason"]
-                )
+                Recommendation(topic=r["topic"], resource_url=r.get("resource_url"), reason=r["reason"])
             )
         self._session.add(report)
         await self._session.flush()
@@ -44,16 +42,10 @@ class ReportRepository:
         return report
 
     async def get(self, report_id: uuid.UUID) -> Report | None:
-        stmt = (
-            select(Report)
-            .where(Report.id == report_id)
-            .options(selectinload(Report.recommendations))
-        )
+        stmt = select(Report).where(Report.id == report_id).options(selectinload(Report.recommendations))
         return (await self._session.execute(stmt)).scalar_one_or_none()
 
-    async def list_by_user(
-        self, user_id: uuid.UUID, *, limit: int, offset: int
-    ) -> tuple[list[Report], int]:
+    async def list_by_user(self, user_id: uuid.UUID, *, limit: int, offset: int) -> tuple[list[Report], int]:
         items_stmt = (
             select(Report)
             .where(Report.user_id == user_id)

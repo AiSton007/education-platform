@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,9 +34,7 @@ class AttemptRepository:
         question_ids = [a["question_id"] for a in answers]
         if question_ids:
             await self._session.execute(
-                delete(Answer).where(
-                    Answer.attempt_id == attempt_id, Answer.question_id.in_(question_ids)
-                )
+                delete(Answer).where(Answer.attempt_id == attempt_id, Answer.question_id.in_(question_ids))
             )
         for a in answers:
             self._session.add(
@@ -69,9 +67,9 @@ class AttemptRepository:
         if error is not None:
             attempt.error = error
         if status == AttemptStatus.SUBMITTED:
-            attempt.submitted_at = datetime.now(timezone.utc)
+            attempt.submitted_at = datetime.now(UTC)
         if status in (AttemptStatus.COMPLETED, AttemptStatus.FAILED):
-            attempt.completed_at = datetime.now(timezone.utc)
+            attempt.completed_at = datetime.now(UTC)
         await self._session.flush()
         await self._session.refresh(attempt)
         return attempt

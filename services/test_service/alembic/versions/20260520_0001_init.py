@@ -32,7 +32,9 @@ def upgrade() -> None:
             END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
                            WHERE t.typname='attempt_status' AND n.nspname='{SCHEMA}') THEN
-                CREATE TYPE {SCHEMA}.attempt_status AS ENUM ('started','submitted','analyzed','completed','failed');
+                CREATE TYPE {SCHEMA}.attempt_status AS ENUM (
+                    'started','submitted','analyzed','completed','failed'
+                );
             END IF;
         END $$;
         """
@@ -63,7 +65,14 @@ def upgrade() -> None:
         sa.Column("order", sa.Integer, nullable=False),
         sa.Column(
             "type",
-            sa.Enum("single", "multiple", "free_text", name="question_type", schema=SCHEMA, create_type=False),
+            sa.Enum(
+                "single",
+                "multiple",
+                "free_text",
+                name="question_type",
+                schema=SCHEMA,
+                create_type=False,
+            ),
             nullable=False,
         ),
         sa.Column("text", sa.Text, nullable=False),
@@ -101,8 +110,14 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "started", "submitted", "analyzed", "completed", "failed",
-                name="attempt_status", schema=SCHEMA, create_type=False,
+                "started",
+                "submitted",
+                "analyzed",
+                "completed",
+                "failed",
+                name="attempt_status",
+                schema=SCHEMA,
+                create_type=False,
             ),
             nullable=False,
             server_default="started",

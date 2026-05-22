@@ -14,9 +14,7 @@ class TestServiceSettings(BaseAppSettings, DatabaseSettings, JWTSettings, Intern
     app_name: str = Field(default="test-service", validation_alias="APP_NAME")
     db_schema: str = Field(default="tests", validation_alias="DB_SCHEMA")
 
-    llm_service_url: str = Field(
-        default="http://llm-service:8080", validation_alias="LLM_SERVICE_URL"
-    )
+    llm_service_url: str = Field(default="http://llm-service:8080", validation_alias="LLM_SERVICE_URL")
     report_service_url: str = Field(
         default="http://report-service:8080", validation_alias="REPORT_SERVICE_URL"
     )

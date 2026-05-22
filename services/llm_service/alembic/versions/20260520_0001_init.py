@@ -42,8 +42,13 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "pending", "processing", "completed", "failed",
-                name="analysis_status", schema=SCHEMA, create_type=False,
+                "pending",
+                "processing",
+                "completed",
+                "failed",
+                name="analysis_status",
+                schema=SCHEMA,
+                create_type=False,
             ),
             nullable=False,
             server_default="pending",

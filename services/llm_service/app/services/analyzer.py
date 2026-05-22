@@ -24,7 +24,7 @@ _log = get_logger("llm-service.analyzer")
 def build_prompt(payload: AnalyzeIn) -> str:
     """Render the LLM prompt.
 
-    Strict JSON schema: ``{strengths:[], weaknesses:[], recommendations:[{topic, resource_url, reason}], score: 0-100}``.
+    Strict JSON schema: strengths, weaknesses, recommendations and score fields.
     """
     questions_map = {q.id: q for q in payload.questions}
     rendered_qa = []
@@ -33,15 +33,11 @@ def build_prompt(payload: AnalyzeIn) -> str:
         if q is None:
             continue
         if q.type in ("single", "multiple") and ans.selected_option_ids:
-            selected_texts = [
-                o.text for o in q.options if o.id in ans.selected_option_ids
-            ]
+            selected_texts = [o.text for o in q.options if o.id in ans.selected_option_ids]
             correct_texts = [o.text for o in q.options if o.is_correct]
-            rendered_qa.append(
-                f"Вопрос: {q.text}\nВыбрано: {selected_texts}\nПравильно: {correct_texts}\n"
-            )
+            rendered_qa.append(f"Question: {q.text}\nSelected: {selected_texts}\nCorrect: {correct_texts}\n")
         else:
-            rendered_qa.append(f"Вопрос: {q.text}\nОтвет (текст): {ans.free_text or ''}\n")
+            rendered_qa.append(f"Question: {q.text}\nFree-text answer: {ans.free_text or ''}\n")
 
     schema = (
         '{"strengths":["..."],"weaknesses":["..."],'
@@ -49,14 +45,14 @@ def build_prompt(payload: AnalyzeIn) -> str:
         '"score":0}'
     )
     return (
-        f"Тест: {payload.test.title}\n"
-        f"Описание: {payload.test.description or ''}\n"
+        f"Test: {payload.test.title}\n"
+        f"Description: {payload.test.description or ''}\n"
         f"---\n"
         f"{''.join(rendered_qa)}\n---\n"
-        f"Проанализируй ответы сотрудника, выдели сильные и слабые стороны, "
-        f"предложи материалы для изучения (включай ссылки на Confluence и инструкции, "
-        f"если уверен) и поставь общую оценку от 0 до 100. "
-        f"Ответ верни строго в JSON следующего формата без какого-либо текста до или после: {schema}"
+        "Analyze the employee's answers, identify strengths and weaknesses, "
+        "suggest study materials, including Confluence links and instructions when relevant, "
+        "and give an overall score from 0 to 100. "
+        f"Return only strict JSON in this format, without extra text: {schema}"
     )
 
 
