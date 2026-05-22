@@ -1,147 +1,205 @@
 global:
-  imageRegistry: harbor.mokryakov.local/education-platform
-  imagePullSecrets: []
-  postgres:
-    host: education-postgresql.database.svc.cluster.local
-    port: 5432
-    database: education
-    dbNamespace: database
-  secrets:
-    jwt:
-      name: jwt-secret              # contains JWT_SECRET
-    internalJwt:
-      name: internal-jwt-secret     # contains INTERNAL_JWT_SECRET
+  imageRegistry: harbor.mokryakov.local:443/education-platform
+
+  imagePullSecrets:
+    - name: harbor-pull-secret
+
   serviceAccount:
     create: true
-    name: education-app
+    name: education-platform
+
+  postgres:
+    host: education-postgresql.database.svc.cluster.local
+    port: "5432"
+    database: education
+    dbNamespace: database
+
+  secrets:
+    jwt:
+      name: jwt-secret
+    internalJwt:
+      name: internal-jwt-secret
 
 defaults:
-  replicaCount: 2
-  resources:
-    requests: { cpu: 50m, memory: 96Mi }
-    limits:   { cpu: 500m, memory: 256Mi }
-  probes:
-    liveness:  { initialDelaySeconds: 10, periodSeconds: 10, timeoutSeconds: 2, failureThreshold: 3 }
-    readiness: { initialDelaySeconds: 5,  periodSeconds: 5,  timeoutSeconds: 2, failureThreshold: 3 }
+  replicaCount: 1
   securityContext:
     runAsNonRoot: true
-    runAsUser: 65532
-    runAsGroup: 65532
-    fsGroup: 65532
-    seccompProfile: { type: RuntimeDefault }
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
   containerSecurityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    runAsUser: 65532
-    capabilities: { drop: ["ALL"] }
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 6
 
 services:
   auth-service:
     enabled: true
-    image: { repository: auth-service, tag: "0.1.0", pullPolicy: IfNotPresent }
     port: 8080
-    env:
-      APP_NAME: auth-service
-      LOG_LEVEL: info
-      DB_SCHEMA: auth
-    db:
-      existingSecret: auth-db
+    image:
+      repository: auth-service
+      tag: dev
+      pullPolicy: IfNotPresent
     migrate:
       enabled: true
-      image: { repository: auth-service-migrate, tag: "0.1.0" }
+      image:
+        repository: auth-service-migrate
+        tag: dev
+    db:
+      existingSecret: auth-db
+    env:
+      SERVICE_NAME: auth-service
+      DB_SSL_MODE: disable
+      USER_SERVICE_URL: http://user-service:8080
 
   user-service:
     enabled: true
-    image: { repository: user-service, tag: "0.1.0" }
     port: 8080
-    env:
-      APP_NAME: user-service
-      DB_SCHEMA: users
-    db: { existingSecret: users-db }
+    image:
+      repository: user-service
+      tag: dev
+      pullPolicy: IfNotPresent
     migrate:
       enabled: true
-      image: { repository: user-service-migrate, tag: "0.1.0" }
+      image:
+        repository: user-service-migrate
+        tag: dev
+    db:
+      existingSecret: users-db
+    env:
+      SERVICE_NAME: user-service
+      DB_SSL_MODE: disable
 
   test-service:
     enabled: true
-    image: { repository: test-service, tag: "0.1.0" }
     port: 8080
-    env:
-      APP_NAME: test-service
-      DB_SCHEMA: tests
-    db: { existingSecret: tests-db }
+    image:
+      repository: test-service
+      tag: dev
+      pullPolicy: IfNotPresent
     migrate:
       enabled: true
-      image: { repository: test-service-migrate, tag: "0.1.0" }
+      image:
+        repository: test-service-migrate
+        tag: dev
+    db:
+      existingSecret: tests-db
+    env:
+      SERVICE_NAME: test-service
+      DB_SSL_MODE: disable
+      LLM_SERVICE_URL: http://llm-service:8080
+      REPORT_SERVICE_URL: http://report-service:8080
 
   llm-service:
     enabled: true
-    image: { repository: llm-service, tag: "0.1.0" }
     port: 8080
-    env:
-      APP_NAME: llm-service
-      DB_SCHEMA: llm
-      LLM_PROVIDER: gigachat
-      LLM_API_URL: https://gigachat.devices.sberbank.ru/api/v1
-      LLM_OAUTH_URL: https://ngw.devices.sberbank.ru:9443/api/v2/oauth
-      LLM_MODEL: GigaChat
-      LLM_TIMEOUT_SECONDS: "30"
-    db: { existingSecret: llm-db }
+    image:
+      repository: llm-service
+      tag: dev
+      pullPolicy: IfNotPresent
     migrate:
       enabled: true
-      image: { repository: llm-service-migrate, tag: "0.1.0" }
+      image:
+        repository: llm-service-migrate
+        tag: dev
+    db:
+      existingSecret: llm-db
     extraEnvFrom:
-      - secretRef: { name: gigachat-creds }    # provides LLM_API_KEY
+      - secretRef:
+          name: gigachat-creds
+    env:
+      SERVICE_NAME: llm-service
+      DB_SSL_MODE: disable
+      LLM_PROVIDER: mock
 
   report-service:
     enabled: true
-    image: { repository: report-service, tag: "0.1.0" }
     port: 8080
-    env:
-      APP_NAME: report-service
-      DB_SCHEMA: reports
-    db: { existingSecret: reports-db }
+    image:
+      repository: report-service
+      tag: dev
+      pullPolicy: IfNotPresent
     migrate:
       enabled: true
-      image: { repository: report-service-migrate, tag: "0.1.0" }
+      image:
+        repository: report-service-migrate
+        tag: dev
+    db:
+      existingSecret: reports-db
+    env:
+      SERVICE_NAME: report-service
+      DB_SSL_MODE: disable
 
   api-gateway:
     enabled: true
-    image: { repository: api-gateway, tag: "0.1.0" }
     port: 8080
+    image:
+      repository: api-gateway
+      tag: dev
+      pullPolicy: IfNotPresent
+    migrate:
+      enabled: false
     env:
-      APP_NAME: api-gateway
+      SERVICE_NAME: api-gateway
       AUTH_SERVICE_URL: http://auth-service:8080
       USER_SERVICE_URL: http://user-service:8080
       TEST_SERVICE_URL: http://test-service:8080
       LLM_SERVICE_URL: http://llm-service:8080
       REPORT_SERVICE_URL: http://report-service:8080
-    db: { existingSecret: "" }   # no DB
-    migrate: { enabled: false }
 
 frontend:
   enabled: true
-  image: { repository: frontend, tag: "0.1.0" }
-  port: 8080
-  replicaCount: 2
-  env:
-    VITE_API_URL: https://api.mokryakov.local
+  replicaCount: 1
+  image:
+    repository: frontend
+    tag: dev
+    pullPolicy: IfNotPresent
 
 ingress:
   enabled: true
   className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: mokryakov-ca
+    nginx.ingress.kubernetes.io/proxy-body-size: "5m"
+  tls:
+    - hosts:
+        - app.mokryakov.local
+      secretName: app-mokryakov-local-tls
+    - hosts:
+        - api.mokryakov.local
+      secretName: api-mokryakov-local-tls
   hosts:
     - host: app.mokryakov.local
       service: frontend
     - host: api.mokryakov.local
       service: api-gateway
-  tls: []
 
 networkPolicies:
   enabled: true
   dns:
-    enabled: true
     coreDnsNamespace: kube-system
-    coreDnsSelector: { k8s-app: kube-dns }
-    nodeLocalDnsCidr: "169.254.20.10/32"
+    coreDnsSelector:
+      k8s-app: kube-dns
+    nodeLocalDnsCidr: 169.254.20.10/32

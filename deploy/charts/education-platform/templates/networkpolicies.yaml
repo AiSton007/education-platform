@@ -1,5 +1,4 @@
 {{- if .Values.networkPolicies.enabled }}
-# 1) default-deny in the application namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -7,9 +6,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   podSelector: {}
-  policyTypes: [Ingress, Egress]
+  policyTypes:
+    - Ingress
+    - Egress
 ---
-# 2) allow DNS egress to kube-system/coredns (CRITICAL — without this the cluster breaks)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -17,12 +17,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   podSelector: {}
-  policyTypes: [Egress]
+  policyTypes:
+    - Egress
   egress:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.networkPolicies.dns.coreDnsNamespace }}
+              kubernetes.io/metadata.name: {{ .Values.networkPolicies.dns.coreDnsNamespace | quote }}
           podSelector:
             matchLabels:
               {{- toYaml .Values.networkPolicies.dns.coreDnsSelector | nindent 14 }}
@@ -31,16 +32,15 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
-    # NodeLocalDNS lives on host IP — allow it explicitly (Calico doesn't auto-resolve)
     - to:
-        - ipBlock: { cidr: {{ .Values.networkPolicies.dns.nodeLocalDnsCidr | quote }} }
+        - ipBlock:
+            cidr: {{ .Values.networkPolicies.dns.nodeLocalDnsCidr | quote }}
       ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
 ---
-# 3) allow internal traffic within namespace (services talk to each other)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -50,7 +50,9 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/part-of: education-platform
-  policyTypes: [Ingress, Egress]
+  policyTypes:
+    - Ingress
+    - Egress
   ingress:
     - from:
         - podSelector:
@@ -62,7 +64,6 @@ spec:
             matchLabels:
               app.kubernetes.io/part-of: education-platform
 ---
-# 4) allow ingress from ingress-nginx to api-gateway and frontend
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -71,8 +72,13 @@ metadata:
 spec:
   podSelector:
     matchExpressions:
-      - { key: app.kubernetes.io/name, operator: In, values: ["api-gateway", "frontend"] }
-  policyTypes: [Ingress]
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - api-gateway
+          - frontend
+  policyTypes:
+    - Ingress
   ingress:
     - from:
         - namespaceSelector:
@@ -82,7 +88,6 @@ spec:
         - protocol: TCP
           port: 8080
 ---
-# 5) allow egress to PostgreSQL in database namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -92,12 +97,13 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/part-of: education-platform
-  policyTypes: [Egress]
+  policyTypes:
+    - Egress
   egress:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.global.postgres.dbNamespace }}
+              kubernetes.io/metadata.name: {{ .Values.global.postgres.dbNamespace | quote }}
           podSelector:
             matchLabels:
               app.kubernetes.io/name: postgresql
@@ -105,7 +111,6 @@ spec:
         - protocol: TCP
           port: 5432
 ---
-# 6) llm-service needs egress to external LLM provider (GigaChat)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -115,10 +120,16 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: llm-service
-  policyTypes: [Egress]
+  policyTypes:
+    - Egress
   egress:
     - to:
-        - ipBlock: { cidr: "0.0.0.0/0", except: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"] }
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
       ports:
         - protocol: TCP
           port: 443

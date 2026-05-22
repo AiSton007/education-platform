@@ -17,13 +17,17 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "ep.selectorLabels" (dict "name" $name "root" $root) | nindent 8 }}
+        {{- include "ep.labels" (dict "name" $name "root" $root) | nindent 8 }}
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: {{ $root.Values.global.serviceAccount.name }}
+      {{- with $root.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         {{- toYaml $root.Values.defaults.securityContext | nindent 8 }}
       containers:
@@ -55,10 +59,12 @@ spec:
                 secretKeyRef:
                   name: {{ $root.Values.global.secrets.internalJwt.name }}
                   key: INTERNAL_JWT_SECRET
+                  optional: true
             {{- range $k, $v := $svc.env }}
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+          {{- if or $svc.db.existingSecret $svc.extraEnvFrom }}
           envFrom:
             {{- if $svc.db.existingSecret }}
             - secretRef:
@@ -67,11 +73,16 @@ spec:
             {{- range $svc.extraEnvFrom }}
             - {{ toYaml . | nindent 14 | trim }}
             {{- end }}
+          {{- end }}
           livenessProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet:
+              path: /healthz
+              port: http
             {{- toYaml $root.Values.defaults.probes.liveness | nindent 12 }}
           readinessProbe:
-            httpGet: { path: /readyz, port: http }
+            httpGet:
+              path: /readyz
+              port: http
             {{- toYaml $root.Values.defaults.probes.readiness | nindent 12 }}
           resources:
             {{- toYaml ($svc.resources | default $root.Values.defaults.resources) | nindent 12 }}
@@ -100,30 +111,50 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "ep.selectorLabels" (dict "name" "frontend" "root" .) | nindent 8 }}
+        {{- include "ep.labels" (dict "name" "frontend" "root" .) | nindent 8 }}
     spec:
       serviceAccountName: {{ .Values.global.serviceAccount.name }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 101
         runAsGroup: 101
         fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
           image: {{ include "ep.image" (dict "image" .Values.frontend.image "root" .) }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: {{ default "IfNotPresent" .Values.frontend.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           ports:
             - name: http
               containerPort: 8080
           readinessProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet:
+              path: /healthz
+              port: http
             initialDelaySeconds: 3
             periodSeconds: 5
           livenessProbe:
-            httpGet: { path: /healthz, port: http }
+            httpGet:
+              path: /healthz
+              port: http
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: { cpu: 20m, memory: 32Mi }
-            limits:   { cpu: 200m, memory: 128Mi }
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
 {{- end }}

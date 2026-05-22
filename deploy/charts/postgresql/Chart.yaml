@@ -1,6 +1,6 @@
 apiVersion: v2
 name: postgresql
-description: PostgreSQL release for the education platform (separate from app chart)
+description: PostgreSQL release for the education platform
 type: application
 version: 0.1.0
 appVersion: "15"

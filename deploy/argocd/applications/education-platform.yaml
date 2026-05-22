@@ -5,20 +5,24 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "0"
-  finalizers: [resources-finalizer.argocd.argoproj.io]
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/AiSton007/education-platform.git
     targetRevision: master
-    path: charts/education-platform
+    path: deploy/charts/education-platform
     helm:
-      valueFiles: [values.yaml]
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: app
   syncPolicy:
-    automated: { prune: true, selfHeal: true }
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
@@ -26,4 +30,7 @@ spec:
       - RespectIgnoreDifferences=true
     retry:
       limit: 3
-      backoff: { duration: 10s, factor: 2, maxDuration: 2m }
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 2m
