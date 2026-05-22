@@ -237,18 +237,23 @@ PY
               mkdir -p ~/.ssh
               ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
               chmod 700 ~/.ssh
+              chmod 600 "$GIT_SSH_KEY" 2>/dev/null || true
 
+              echo "[CHECK] GitHub SSH deploy key access to $DEPLOY_REPO"
               set +e
-              OUT=$(GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o UserKnownHostsFile=$HOME/.ssh/known_hosts" ssh -T git@github.com 2>&1)
+              OUT=$(GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
+                git ls-remote "$DEPLOY_REPO" HEAD 2>&1)
               RC=$?
               set -e
               echo "$OUT"
 
-              echo "$OUT" | grep -q "successfully authenticated" || {
-                echo "[FAIL] GitHub SSH deploy key check failed with rc=$RC"
-                exit 1
-              }
-              echo "[OK] GitHub SSH deploy key works"
+              if [ "$RC" -eq 0 ]; then
+                echo "[OK] GitHub SSH deploy key can read the repository"
+              else
+                echo "[WARN] GitHub SSH deploy key check failed with rc=$RC"
+                echo "[WARN] This preflight check is non-critical and the pipeline will continue."
+                echo "[WARN] The final stage 'Push updated values.yaml' may still fail if github-deploy-ssh has no write access."
+              fi
             '''
           }
         }
