@@ -1,5 +1,10 @@
 # Values for the standalone PostgreSQL release.
 
+# Required when substituting Bitnami chart images.
+global:
+  security:
+    allowInsecureImages: true
+
 passwords:
   postgres: postgres
   auth: auth_pass_change_me
@@ -12,13 +17,13 @@ postgresql:
   fullnameOverride: education-postgresql
   architecture: standalone
 
-  # The default image tag from the Bitnami chart may point to an unavailable old tag.
-  # Pin to a currently resolvable major tag for the first cluster deployment.
-  # Later this image can be mirrored to Harbor and switched to harbor.mokryakov.local:443.
+  # Bitnami changed the public image catalog: old versioned docker.io/bitnami tags can disappear.
+  # For the current MVP we use the free community Secure Image. It is suitable for dev/test.
+  # For stricter production behavior later, mirror the image into Harbor or switch to a PostgreSQL operator.
   image:
     registry: docker.io
-    repository: bitnami/postgresql
-    tag: "16"
+    repository: bitnamisecure/postgresql
+    tag: "latest"
     pullPolicy: IfNotPresent
 
   auth:
