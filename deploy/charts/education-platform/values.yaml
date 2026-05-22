@@ -66,7 +66,7 @@ services:
       enabled: true
       image:
         repository: auth-service-migrate
-        tag: dev
+        tag: 55f552c
     db:
       existingSecret: auth-db
     env:
