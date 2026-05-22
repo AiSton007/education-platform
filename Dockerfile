@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir uv==0.5.4
 WORKDIR /workspace
 
 # Copy only metadata first to maximise layer cache hit ratio.
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock* README.md ./
 RUN uv sync --frozen --no-install-project --no-dev || uv sync --no-install-project --no-dev
 
 # Now copy the source and create a wheel-less install of the project itself.
