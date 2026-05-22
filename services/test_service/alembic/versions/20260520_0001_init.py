@@ -11,6 +11,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 
 revision: str = "0001_tests_init"
@@ -19,26 +20,31 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 SCHEMA = "tests"
+question_type_enum = postgresql.ENUM(
+    "single",
+    "multiple",
+    "free_text",
+    name="question_type",
+    schema=SCHEMA,
+    create_type=False,
+)
+attempt_status_enum = postgresql.ENUM(
+    "started",
+    "submitted",
+    "analyzed",
+    "completed",
+    "failed",
+    name="attempt_status",
+    schema=SCHEMA,
+    create_type=False,
+)
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
     op.execute(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA}"')
-    op.execute(
-        f"""
-        DO $$ BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
-                           WHERE t.typname='question_type' AND n.nspname='{SCHEMA}') THEN
-                CREATE TYPE {SCHEMA}.question_type AS ENUM ('single','multiple','free_text');
-            END IF;
-            IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace
-                           WHERE t.typname='attempt_status' AND n.nspname='{SCHEMA}') THEN
-                CREATE TYPE {SCHEMA}.attempt_status AS ENUM (
-                    'started','submitted','analyzed','completed','failed'
-                );
-            END IF;
-        END $$;
-        """
-    )
+    question_type_enum.create(bind, checkfirst=True)
+    attempt_status_enum.create(bind, checkfirst=True)
 
     op.create_table(
         "tests",
@@ -65,14 +71,7 @@ def upgrade() -> None:
         sa.Column("order", sa.Integer, nullable=False),
         sa.Column(
             "type",
-            sa.Enum(
-                "single",
-                "multiple",
-                "free_text",
-                name="question_type",
-                schema=SCHEMA,
-                create_type=False,
-            ),
+            question_type_enum,
             nullable=False,
         ),
         sa.Column("text", sa.Text, nullable=False),
@@ -109,16 +108,7 @@ def upgrade() -> None:
         sa.Column("user_id", UUID(as_uuid=True), nullable=False),
         sa.Column(
             "status",
-            sa.Enum(
-                "started",
-                "submitted",
-                "analyzed",
-                "completed",
-                "failed",
-                name="attempt_status",
-                schema=SCHEMA,
-                create_type=False,
-            ),
+            attempt_status_enum,
             nullable=False,
             server_default="started",
         ),
@@ -154,7 +144,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
     for table in ("answers", "attempts", "options", "questions", "tests"):
         op.drop_table(table, schema=SCHEMA)
-    op.execute(f"DROP TYPE IF EXISTS {SCHEMA}.attempt_status")
-    op.execute(f"DROP TYPE IF EXISTS {SCHEMA}.question_type")
+    attempt_status_enum.drop(bind, checkfirst=True)
+    question_type_enum.drop(bind, checkfirst=True)

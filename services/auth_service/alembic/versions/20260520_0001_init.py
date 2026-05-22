@@ -11,6 +11,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0001_auth_init"
 down_revision: str | None = None
@@ -18,23 +19,20 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 SCHEMA = "auth"
+user_role_enum = postgresql.ENUM(
+    "employee",
+    "manager",
+    "admin",
+    name="user_role",
+    schema=SCHEMA,
+    create_type=False,
+)
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
     op.execute(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA}"')
-    op.execute(
-        f"""
-        DO $$ BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_type t
-                JOIN pg_namespace n ON n.oid = t.typnamespace
-                WHERE t.typname = 'user_role' AND n.nspname = '{SCHEMA}'
-            ) THEN
-                CREATE TYPE {SCHEMA}.user_role AS ENUM ('employee', 'manager', 'admin');
-            END IF;
-        END $$;
-        """
-    )
+    user_role_enum.create(bind, checkfirst=True)
 
     op.create_table(
         "users",
@@ -43,14 +41,7 @@ def upgrade() -> None:
         sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column(
             "role",
-            sa.Enum(
-                "employee",
-                "manager",
-                "admin",
-                name="user_role",
-                schema=SCHEMA,
-                create_type=False,
-            ),
+            user_role_enum,
             nullable=False,
             server_default="employee",
         ),
@@ -80,10 +71,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
     op.drop_index("ix_auth_refresh_tokens_jti", table_name="refresh_tokens", schema=SCHEMA)
     op.drop_index("ix_auth_refresh_tokens_user_id", table_name="refresh_tokens", schema=SCHEMA)
     op.drop_table("refresh_tokens", schema=SCHEMA)
 
     op.drop_index("ix_auth_users_email", table_name="users", schema=SCHEMA)
     op.drop_table("users", schema=SCHEMA)
-    op.execute(f"DROP TYPE IF EXISTS {SCHEMA}.user_role")
+    user_role_enum.drop(bind, checkfirst=True)
