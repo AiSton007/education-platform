@@ -67,7 +67,7 @@ spec:
 
   environment {
     HARBOR = 'harbor.mokryakov.local:443'
-    HARBOR_PROJECT = 'education-platform'
+    HARBOR_PROJECT = 'library'
     DEPLOY_REPO = 'git@github.com:AiSton007/education-platform.git'
     DEPLOY_BRANCH = 'master'
     VALUES_FILE = 'deploy/charts/education-platform/values.yaml'
