@@ -9,7 +9,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: git@harbor.mokryakov.local:platform/education-platform-deploy.git
+    repoURL: https://github.com/AiSton007/education-platform.git
     targetRevision: master
     path: charts/postgresql
     helm:
