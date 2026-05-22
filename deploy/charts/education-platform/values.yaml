@@ -60,7 +60,7 @@ services:
     port: 8080
     image:
       repository: auth-service
-      tag: dev
+      tag: 55f552c
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
@@ -79,13 +79,13 @@ services:
     port: 8080
     image:
       repository: user-service
-      tag: dev
+      tag: 55f552c
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: user-service-migrate
-        tag: dev
+        tag: 55f552c
     db:
       existingSecret: users-db
     env:
@@ -97,13 +97,13 @@ services:
     port: 8080
     image:
       repository: test-service
-      tag: dev
+      tag: 55f552c
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: test-service-migrate
-        tag: dev
+        tag: 55f552c
     db:
       existingSecret: tests-db
     env:
@@ -117,13 +117,13 @@ services:
     port: 8080
     image:
       repository: llm-service
-      tag: dev
+      tag: d55f552c
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: llm-service-migrate
-        tag: dev
+        tag: 55f552c
     db:
       existingSecret: llm-db
     extraEnvFrom:
@@ -139,13 +139,13 @@ services:
     port: 8080
     image:
       repository: report-service
-      tag: dev
+      tag: 55f552c
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: report-service-migrate
-        tag: dev
+        tag: 55f552c
     db:
       existingSecret: reports-db
     env:
@@ -157,7 +157,7 @@ services:
     port: 8080
     image:
       repository: api-gateway
-      tag: dev
+      tag: 55f552c
       pullPolicy: IfNotPresent
     migrate:
       enabled: false
@@ -175,7 +175,7 @@ frontend:
   replicaCount: 1
   image:
     repository: frontend
-    tag: dev
+    tag: 55f552c
     pullPolicy: IfNotPresent
 
 ingress:
