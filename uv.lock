@@ -190,6 +190,11 @@ dev = [
     { name = "types-passlib" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13,<2.0" },
@@ -218,6 +223,9 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32,<0.33" },
 ]
 provides-extras = ["auth", "user", "test", "llm", "report", "gateway", "dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "ruff", specifier = "==0.7.4" }]
 
 [[package]]
 name = "email-validator"

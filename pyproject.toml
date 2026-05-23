@@ -83,3 +83,8 @@ python_version = "3.12"
 strict = false
 ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
+
+[dependency-groups]
+dev = [
+    "ruff==0.7.4",
+]

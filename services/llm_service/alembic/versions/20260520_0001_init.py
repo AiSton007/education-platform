@@ -20,7 +20,6 @@ SCHEMA = "llm"
 
 
 def upgrade() -> None:
-
     op.execute(f'CREATE SCHEMA IF NOT EXISTS "{SCHEMA}"')
 
     op.execute(
@@ -59,12 +58,8 @@ def upgrade() -> None:
         """
     )
 
-    op.execute(
-        f'CREATE INDEX IF NOT EXISTS ix_llm_analyses_attempt_id ON "{SCHEMA}".analyses (attempt_id)'
-    )
-    op.execute(
-        f'CREATE INDEX IF NOT EXISTS ix_llm_analyses_user_id ON "{SCHEMA}".analyses (user_id)'
-    )
+    op.execute(f'CREATE INDEX IF NOT EXISTS ix_llm_analyses_attempt_id ON "{SCHEMA}".analyses (attempt_id)')
+    op.execute(f'CREATE INDEX IF NOT EXISTS ix_llm_analyses_user_id ON "{SCHEMA}".analyses (user_id)')
 
 
 def downgrade() -> None:
