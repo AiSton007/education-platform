@@ -1,8 +1,8 @@
 // Jenkins pipeline for education-platform monorepo.
 // Kubernetes-native build: no Docker daemon is required on Jenkins or cluster nodes.
 // Required Jenkins credentials:
-//   harbor-creds      - Username/password for Harbor robot account with push/pull to the configured Harbor project
-//   github-deploy-ssh - SSH private key with write access to GitHub repo AiSton007/education-platform
+//   harbor-creds - Username/password for Harbor robot account with push/pull to the configured Harbor project
+//   github-token - Username/password (GitHub username + PAT) with write access to GitHub repo AiSton007/education-platform
 
 pipeline {
   agent {
@@ -70,7 +70,7 @@ spec:
     HARBOR_SCHEME = 'http'
     HARBOR_PORT = '80'
     HARBOR_PROJECT = 'library'
-    DEPLOY_REPO = 'git@github.com:AiSton007/education-platform.git'
+    DEPLOY_REPO = 'https://github.com/AiSton007/education-platform.git'
     DEPLOY_BRANCH = 'master'
     VALUES_FILE = 'deploy/charts/education-platform/values.yaml'
   }
@@ -234,28 +234,23 @@ PY
         }
 
         container('git') {
-          withCredentials([sshUserPrivateKey(credentialsId: 'github-deploy-ssh', keyFileVariable: 'GIT_SSH_KEY')]) {
+          withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
             sh '''
               set -eu
-              mkdir -p ~/.ssh
-              ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-              chmod 700 ~/.ssh
-              chmod 600 "$GIT_SSH_KEY" 2>/dev/null || true
 
-              echo "[CHECK] GitHub SSH deploy key access to $DEPLOY_REPO"
+              echo "[CHECK] GitHub token credential access to $DEPLOY_REPO"
               set +e
-              OUT=$(GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
-                git ls-remote "$DEPLOY_REPO" HEAD 2>&1)
+              OUT=$(git ls-remote "https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/AiSton007/education-platform.git" HEAD 2>&1)
               RC=$?
               set -e
               echo "$OUT"
 
               if [ "$RC" -eq 0 ]; then
-                echo "[OK] GitHub SSH deploy key can read the repository"
+                echo "[OK] GitHub token credential can read the repository"
               else
-                echo "[WARN] GitHub SSH deploy key check failed with rc=$RC"
+                echo "[WARN] GitHub token credential check failed with rc=$RC"
                 echo "[WARN] This preflight check is non-critical and the pipeline will continue."
-                echo "[WARN] The final stage 'Push updated values.yaml' may still fail if github-deploy-ssh has no write access."
+                echo "[WARN] The final stage 'Push updated values.yaml' may still fail if github-token has no write access."
               fi
             '''
           }
@@ -465,7 +460,7 @@ PY
       when { expression { env.SKIP_PIPELINE != 'true' } }
       steps {
         container('git') {
-          withCredentials([sshUserPrivateKey(credentialsId: 'github-deploy-ssh', keyFileVariable: 'GIT_SSH_KEY')]) {
+          withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN')]) {
             sh '''
               set -eux
               cd "$WORKSPACE"
@@ -476,11 +471,6 @@ PY
               git config user.email "jenkins@mokryakov.local"
               git config user.name "Jenkins"
 
-              mkdir -p ~/.ssh
-              ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true
-              chmod 700 ~/.ssh
-              chmod 600 "$GIT_SSH_KEY" 2>/dev/null || true
-
               git remote set-url origin "$DEPLOY_REPO"
               git add "$VALUES_FILE"
 
@@ -490,8 +480,10 @@ PY
               fi
 
               git commit -m "ci: bump education-platform images to $SHA"
-              GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts" \
-                git push origin HEAD:"$DEPLOY_BRANCH"
+              set +x
+              git remote set-url origin "https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/AiSton007/education-platform.git"
+              git push origin HEAD:"$DEPLOY_BRANCH"
+              set -x
             '''
           }
         }
