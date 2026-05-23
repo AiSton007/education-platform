@@ -371,6 +371,7 @@ EOF_AUTH
                 --dockerfile "$WORKSPACE/Dockerfile" \
                 --build-arg SERVICE="$service" \
                 --destination "$HARBOR/$HARBOR_PROJECT/$image_name:$SHA" \
+                --destination "$HARBOR/$HARBOR_PROJECT/$image_name:latest" \
                 --cache=true \
                 --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
                 --skip-tls-verify-registry "$HARBOR" \
@@ -382,6 +383,7 @@ EOF_AUTH
                   --dockerfile "$WORKSPACE/Dockerfile.migrate" \
                   --build-arg SERVICE="$service" \
                   --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:$SHA" \
+                  --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:latest" \
                   --cache=true \
                   --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
                   --skip-tls-verify-registry "$HARBOR" \
@@ -409,6 +411,7 @@ EOF_AUTH
               --dockerfile "$WORKSPACE/frontend/Dockerfile" \
               --build-arg VITE_API_URL=https://api.mokryakov.local \
               --destination "$HARBOR/$HARBOR_PROJECT/frontend:$SHA" \
+              --destination "$HARBOR/$HARBOR_PROJECT/frontend:latest" \
               --cache=true \
               --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
               --skip-tls-verify-registry "$HARBOR" \
