@@ -265,7 +265,21 @@ PY
           sh '''
             set -eux
             apt-get update
-            apt-get install -y --no-install-recommends build-essential libpq-dev curl ca-certificates git
+            apt-get install -y --no-install-recommends \
+              build-essential \
+              libpq-dev \
+              curl \
+              ca-certificates \
+              git \
+              pkg-config \
+              libcairo2-dev \
+              libpango1.0-dev \
+              libgdk-pixbuf-2.0-dev \
+              libffi-dev \
+              shared-mime-info \
+              fontconfig \
+              zlib1g-dev \
+              libjpeg-dev
             rm -rf /var/lib/apt/lists/*
             pip install --no-cache-dir uv==0.5.4
             uv --version
