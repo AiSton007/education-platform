@@ -372,8 +372,7 @@ EOF_AUTH
                 --build-arg SERVICE="$service" \
                 --destination "$HARBOR/$HARBOR_PROJECT/$image_name:$SHA" \
                 --destination "$HARBOR/$HARBOR_PROJECT/$image_name:latest" \
-                --cache=true \
-                --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
+                --cache=false \
                 --skip-tls-verify-registry "$HARBOR" \
                 --insecure-registry "$HARBOR"
 
@@ -384,8 +383,7 @@ EOF_AUTH
                   --build-arg SERVICE="$service" \
                   --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:$SHA" \
                   --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:latest" \
-                  --cache=true \
-                  --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
+                  --cache=false \
                   --skip-tls-verify-registry "$HARBOR" \
                 --insecure-registry "$HARBOR"
               fi
@@ -412,8 +410,7 @@ EOF_AUTH
               --build-arg VITE_API_URL=https://api.mokryakov.local \
               --destination "$HARBOR/$HARBOR_PROJECT/frontend:$SHA" \
               --destination "$HARBOR/$HARBOR_PROJECT/frontend:latest" \
-              --cache=true \
-              --cache-repo "$HARBOR/$HARBOR_PROJECT/cache" \
+              --cache=false \
               --skip-tls-verify-registry "$HARBOR" \
                 --insecure-registry "$HARBOR"
           '''
