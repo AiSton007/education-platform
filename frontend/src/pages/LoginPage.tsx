@@ -1,6 +1,12 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../api";
+import { getStoredRole, login, Role } from "../api";
+
+function homeForRole(role: Role | null): string {
+  if (role === "manager" || role === "admin") return "/manage/tests";
+  if (role === "employee") return "/home";
+  return "/";
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -17,7 +23,7 @@ export function LoginPage() {
       const tokens = await login(email, password);
       localStorage.setItem("access_token", tokens.access_token);
       localStorage.setItem("refresh_token", tokens.refresh_token);
-      navigate("/tests");
+      navigate(homeForRole(getStoredRole()));
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setError(((err as any)?.response?.data?.error?.message) ?? "Login failed");

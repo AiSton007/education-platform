@@ -46,6 +46,7 @@ class ProxyRouter:
             ("/api/v1/users", user_url),
             ("/api/v1/tests", test_url),
             ("/api/v1/attempts", test_url),
+            ("/api/v1/assignments", test_url),
             ("/api/v1/reports", report_url),
         )
 

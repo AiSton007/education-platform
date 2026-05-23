@@ -7,14 +7,13 @@ import uuid
 from services.llm_service.app.schemas import (
     AnalyzeIn,
     AnswerPayload,
-    OptionPayload,
     QuestionPayload,
     TestPayload,
 )
 from services.llm_service.app.services.analyzer import build_prompt
 
 
-def test_build_prompt_renders_test_and_answers() -> None:
+def test_build_prompt_includes_correct_answer_and_user_answer() -> None:
     qid = "11111111-1111-1111-1111-111111111111"
     payload = AnalyzeIn(
         attempt_id=uuid.uuid4(),
@@ -24,19 +23,18 @@ def test_build_prompt_renders_test_and_answers() -> None:
             QuestionPayload(
                 id=qid,
                 order=0,
-                type="single",
                 text="Что такое 2FA?",
+                correct_answer="Второй фактор аутентификации, дополняющий пароль.",
                 weight=1.0,
-                options=[
-                    OptionPayload(id="o1", order=0, text="Двойной пароль", is_correct=False),
-                    OptionPayload(id="o2", order=1, text="Второй фактор аутентификации", is_correct=True),
-                ],
             )
         ],
-        answers=[AnswerPayload(question_id=qid, selected_option_ids=["o2"])],
+        answers=[AnswerPayload(question_id=qid, free_text="Двухфакторная аутентификация")],
     )
     prompt = build_prompt(payload)
     assert "ИБ-минимум" in prompt
     assert "Что такое 2FA?" in prompt
-    assert '"strengths"' in prompt
-    assert "score" in prompt
+    assert "Второй фактор" in prompt
+    assert "Двухфакторная аутентификация" in prompt
+    assert '"per_question"' in prompt
+    assert '"overall_score"' in prompt
+    assert '"recommendations"' in prompt

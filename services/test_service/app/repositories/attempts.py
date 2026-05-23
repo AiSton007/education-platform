@@ -5,11 +5,11 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from services.test_service.app.models import Answer, Attempt, AttemptStatus
+from services.test_service.app.models import Answer, Attempt, AttemptStatus, Test
 
 
 class AttemptRepository:
@@ -41,10 +41,30 @@ class AttemptRepository:
                 Answer(
                     attempt_id=attempt_id,
                     question_id=a["question_id"],
-                    selected_option_ids=a.get("selected_option_ids"),
                     free_text=a.get("free_text"),
                 )
             )
+        await self._session.flush()
+
+    async def update_answer_scores(self, attempt_id: uuid.UUID, per_question: list[dict]) -> None:
+        for entry in per_question:
+            stmt = (
+                select(Answer)
+                .where(
+                    Answer.attempt_id == attempt_id,
+                    Answer.question_id == uuid.UUID(str(entry["question_id"])),
+                )
+                .limit(1)
+            )
+            ans = (await self._session.execute(stmt)).scalar_one_or_none()
+            if ans is None:
+                continue
+            score_val = entry.get("score")
+            if score_val is not None:
+                ans.score = float(score_val)
+            feedback_val = entry.get("feedback")
+            if feedback_val is not None:
+                ans.feedback = str(feedback_val)
         await self._session.flush()
 
     async def mark_status(
@@ -73,3 +93,44 @@ class AttemptRepository:
         await self._session.flush()
         await self._session.refresh(attempt)
         return attempt
+
+    async def list_attempts(
+        self,
+        *,
+        user_id: uuid.UUID | None,
+        test_id: uuid.UUID | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[Attempt], int]:
+        stmt = select(Attempt).order_by(Attempt.started_at.desc())
+        total_stmt = select(func.count()).select_from(Attempt)
+        if user_id is not None:
+            stmt = stmt.where(Attempt.user_id == user_id)
+            total_stmt = total_stmt.where(Attempt.user_id == user_id)
+        if test_id is not None:
+            stmt = stmt.where(Attempt.test_id == test_id)
+            total_stmt = total_stmt.where(Attempt.test_id == test_id)
+        items = (await self._session.execute(stmt.limit(limit).offset(offset))).scalars().all()
+        total = (await self._session.execute(total_stmt)).scalar_one()
+        return list(items), int(total)
+
+    async def history_for_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[tuple[Attempt, Test]], int]:
+        stmt = (
+            select(Attempt, Test)
+            .join(Test, Test.id == Attempt.test_id)
+            .where(Attempt.user_id == user_id)
+            .order_by(Attempt.started_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        total_stmt = select(func.count()).select_from(Attempt).where(Attempt.user_id == user_id)
+        rows = (await self._session.execute(stmt)).all()
+        items = [(row[0], row[1]) for row in rows]
+        total = (await self._session.execute(total_stmt)).scalar_one()
+        return items, int(total)

@@ -18,6 +18,9 @@ class TestServiceSettings(BaseAppSettings, DatabaseSettings, JWTSettings, Intern
     report_service_url: str = Field(
         default="http://report-service:8080", validation_alias="REPORT_SERVICE_URL"
     )
+    user_service_url: str = Field(
+        default="http://user-service:8080", validation_alias="USER_SERVICE_URL"
+    )
 
 
 _settings: TestServiceSettings | None = None

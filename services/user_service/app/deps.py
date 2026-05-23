@@ -22,7 +22,9 @@ deps = UserDeps()
 
 _settings = get_settings()
 _current_user_resolver = make_current_user_dep(_settings)
-_internal_caller_resolver = make_internal_caller_dep(_settings, "user-service", "auth-service")
+_internal_caller_resolver = make_internal_caller_dep(
+    _settings, "user-service", "auth-service", "test-service"
+)
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:

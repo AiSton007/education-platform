@@ -62,3 +62,9 @@ class ProfileService:
         profile = await self._repo.update(profile, fields=clean)
         await self._session.commit()
         return profile
+
+    async def deactivate(self, user_id: uuid.UUID) -> Profile:
+        profile = await self.get(user_id)
+        profile = await self._repo.update(profile, fields={"is_active": False})
+        await self._session.commit()
+        return profile

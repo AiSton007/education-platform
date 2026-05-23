@@ -111,6 +111,7 @@ services:
       DB_SSL_MODE: disable
       LLM_SERVICE_URL: http://llm-service:8080
       REPORT_SERVICE_URL: http://report-service:8080
+      USER_SERVICE_URL: http://user-service:8080
 
   llm-service:
     enabled: true

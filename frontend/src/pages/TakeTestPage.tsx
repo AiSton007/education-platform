@@ -9,17 +9,12 @@ import {
   Test,
 } from "../api";
 
-interface Selection {
-  selected_option_ids?: string[];
-  free_text?: string;
-}
-
 export function TakeTestPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [test, setTest] = useState<Test | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
-  const [answers, setAnswers] = useState<Record<string, Selection>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,47 +22,35 @@ export function TakeTestPage() {
     (async () => {
       try {
         const t = await getTest(id);
-        setTest(t);
+        setTest(t as Test);
         const a = await startAttempt(id);
         setAttempt(a);
       } catch (err: unknown) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setError((err as any)?.response?.data?.error?.message ?? "Cannot start test");
+        setError((err as any)?.response?.data?.error?.message ?? "Не удалось начать тест");
       }
     })();
   }, [id]);
 
-  function selectOption(questionId: string, optionId: string, multiple: boolean) {
-    setAnswers((prev) => {
-      const current = prev[questionId]?.selected_option_ids ?? [];
-      if (!multiple) return { ...prev, [questionId]: { selected_option_ids: [optionId] } };
-      const next = current.includes(optionId)
-        ? current.filter((id) => id !== optionId)
-        : [...current, optionId];
-      return { ...prev, [questionId]: { selected_option_ids: next } };
-    });
-  }
-
   function setFreeText(questionId: string, text: string) {
-    setAnswers((prev) => ({ ...prev, [questionId]: { free_text: text } }));
+    setAnswers((prev) => ({ ...prev, [questionId]: text }));
   }
 
   async function onSubmit() {
-    if (!attempt) return;
+    if (!attempt || !test) return;
     setBusy(true);
     setError(null);
     try {
-      const payload = Object.entries(answers).map(([question_id, sel]) => ({
-        question_id,
-        ...sel,
+      const payload = test.questions.map((q) => ({
+        question_id: q.id,
+        free_text: answers[q.id] ?? "",
       }));
       await postAnswers(attempt.id, payload);
       const result = await submitAttempt(attempt.id);
-      if (result.report_id) navigate(`/reports/${result.report_id}`);
-      else setError("Submitted, no report id returned");
+      navigate(`/attempts/${result.attempt_id}`);
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setError((err as any)?.response?.data?.error?.message ?? "Submit failed");
+      setError((err as any)?.response?.data?.error?.message ?? "Ошибка отправки");
     } finally {
       setBusy(false);
     }
@@ -82,32 +65,17 @@ export function TakeTestPage() {
       {error && <div className="error">{error}</div>}
       {test.questions.map((q) => (
         <div key={q.id} className="question">
-          <div><strong>{q.order + 1}. {q.text}</strong></div>
-          {q.type !== "free_text" ? (
-            <div className="options">
-              {q.options.map((o) => (
-                <label key={o.id}>
-                  <input
-                    type={q.type === "single" ? "radio" : "checkbox"}
-                    name={q.id}
-                    checked={Boolean(answers[q.id]?.selected_option_ids?.includes(o.id))}
-                    onChange={() => selectOption(q.id, o.id, q.type === "multiple")}
-                  />
-                  {o.text}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <textarea
-              rows={3}
-              value={answers[q.id]?.free_text ?? ""}
-              onChange={(e) => setFreeText(q.id, e.target.value)}
-            />
-          )}
+          <div className="question-header"><strong>{q.order + 1}. {q.text}</strong></div>
+          <textarea
+            rows={4}
+            placeholder="Ваш ответ свободной формой"
+            value={answers[q.id] ?? ""}
+            onChange={(e) => setFreeText(q.id, e.target.value)}
+          />
         </div>
       ))}
-      <button className="btn" onClick={onSubmit} disabled={busy}>
-        {busy ? "Отправка…" : "Отправить тест"}
+      <button className="btn" onClick={onSubmit} disabled={busy} style={{ marginTop: "1rem" }}>
+        {busy ? "Отправка…" : "Завершить тест"}
       </button>
     </div>
   );

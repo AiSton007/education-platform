@@ -35,6 +35,10 @@ export function RegisterPage() {
   return (
     <div className="card">
       <h2>Регистрация</h2>
+      <p className="muted">
+        Новые учетные записи создаются как <strong>employee</strong>. Для назначения роли менеджера
+        или администратора обратитесь к администратору платформы.
+      </p>
       {ok && <div className="ok">Готово, перенаправляем на вход…</div>}
       <form onSubmit={onSubmit}>
         <label>Email</label>

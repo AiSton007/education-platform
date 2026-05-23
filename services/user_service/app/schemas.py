@@ -19,6 +19,7 @@ class ProfileOut(BaseModel):
     department: str | None
     position: str | None
     role: Role
+    is_active: bool
     created_at: datetime
     updated_at: datetime
 
@@ -28,6 +29,7 @@ class ProfilePatch(BaseModel):
     department: str | None = Field(default=None, max_length=255)
     position: str | None = Field(default=None, max_length=255)
     role: Role | None = None
+    is_active: bool | None = None
 
 
 class ProfileInternalCreate(BaseModel):
@@ -39,6 +41,15 @@ class ProfileInternalCreate(BaseModel):
     department: str | None = None
     position: str | None = None
     role: Role = Role.EMPLOYEE
+
+
+class ProfileStatusOut(BaseModel):
+    """Minimal status response used by auth-service during login (internal-only)."""
+
+    model_config = ConfigDict(from_attributes=True)
+    user_id: uuid.UUID
+    is_active: bool
+    role: Role
 
 
 class ProfilesList(BaseModel):

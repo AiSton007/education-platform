@@ -24,15 +24,16 @@ class ReportsService:
         user_id: uuid.UUID,
         analysis_id: uuid.UUID,
         score: float,
-        analysis: dict,
+        data: dict,
+        recommendations: list[dict],
     ) -> Report:
         report = await self._repo.create(
             attempt_id=attempt_id,
             user_id=user_id,
             analysis_id=analysis_id,
             score=score,
-            data=analysis,
-            recommendations=analysis.get("recommendations", []),
+            data=data,
+            recommendations=recommendations,
         )
         await self._session.commit()
         business_events.labels(service="report-service", event="report_created").inc()

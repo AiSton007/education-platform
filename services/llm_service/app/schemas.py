@@ -1,4 +1,9 @@
-"""Pydantic DTOs for ``llm-service``."""
+"""Pydantic DTOs for ``llm-service``.
+
+Free-form grading model: payload now carries each question's ``correct_answer`` so the
+LLM (or mock provider) can compare it against the user's free-text answer and return a
+per-question score in the 0.0..1.0 range (one decimal).
+"""
 
 from __future__ import annotations
 
@@ -6,30 +11,21 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from services.llm_service.app.models import AnalysisStatus
-
-
-class OptionPayload(BaseModel):
-    id: str
-    order: int
-    text: str
-    is_correct: bool
 
 
 class QuestionPayload(BaseModel):
     id: str
     order: int
-    type: str
     text: str
-    weight: float
-    options: list[OptionPayload] = Field(default_factory=list)
+    correct_answer: str
+    weight: float = 1.0
 
 
 class AnswerPayload(BaseModel):
     question_id: str
-    selected_option_ids: list[str] = Field(default_factory=list)
     free_text: str | None = None
 
 
@@ -47,17 +43,34 @@ class AnalyzeIn(BaseModel):
     answers: list[AnswerPayload]
 
 
+class PerQuestionScore(BaseModel):
+    question_id: str
+    score: float = Field(ge=0.0, le=1.0)
+    feedback: str | None = None
+
+    @field_validator("score")
+    @classmethod
+    def _round_to_one_decimal(cls, v: float) -> float:
+        return round(max(0.0, min(1.0, float(v))), 1)
+
+
 class Recommendation(BaseModel):
     topic: str
-    resource_url: str | None = None
     reason: str
+    resource_url: str | None = None
 
 
 class AnalysisResult(BaseModel):
-    strengths: list[str] = Field(default_factory=list)
-    weaknesses: list[str] = Field(default_factory=list)
+    """Result returned by the analyzer for a single attempt."""
+
+    per_question: list[PerQuestionScore] = Field(default_factory=list)
+    overall_score: float = Field(ge=0.0, le=1.0, default=0.0)
     recommendations: list[Recommendation] = Field(default_factory=list)
-    score: float = Field(ge=0, le=100)
+
+    @field_validator("overall_score")
+    @classmethod
+    def _round_overall(cls, v: float) -> float:
+        return round(max(0.0, min(1.0, float(v))), 1)
 
 
 class AnalyzeOut(BaseModel):

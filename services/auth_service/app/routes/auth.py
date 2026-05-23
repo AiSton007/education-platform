@@ -7,8 +7,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 
+from pkg.errors import Forbidden
 from services.auth_service.app.deps import CurrentUserDep, get_auth_service
 from services.auth_service.app.schemas import (
+    AdminResetPasswordIn,
+    AdminResetPasswordOut,
     LoginIn,
     MeOut,
     RefreshIn,
@@ -76,3 +79,19 @@ async def me(
 ) -> MeOut:
     record = await service.get_user(uuid.UUID(user.id))
     return MeOut.model_validate(record)
+
+
+@router.post("/admin/reset-password", response_model=AdminResetPasswordOut)
+async def admin_reset_password(
+    payload: AdminResetPasswordIn,
+    user: CurrentUserDep,
+    service: Annotated[AuthService, Depends(get_auth_service)],
+) -> AdminResetPasswordOut:
+    """Forcibly set a new password for the given user (admin-only).
+
+    All existing refresh tokens are revoked so the user must log in with the new password.
+    """
+    if user.role != "admin":
+        raise Forbidden("Only admin can reset passwords")
+    await service.reset_password(user_id=payload.user_id, new_password=payload.new_password)
+    return AdminResetPasswordOut(user_id=payload.user_id)

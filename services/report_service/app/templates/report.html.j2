@@ -4,54 +4,69 @@
   <meta charset="utf-8">
   <title>Отчёт по тестированию</title>
   <style>
-    body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; max-width: 880px; margin: 2rem auto; padding: 0 1.5rem; color: #1f2933; }
-    h1 { font-size: 1.6rem; border-bottom: 2px solid #e2e8f0; padding-bottom: .5rem; }
-    .meta { color: #52606d; font-size: .9rem; margin-bottom: 1.5rem; }
-    .score { display: inline-block; padding: .3rem .8rem; border-radius: 999px; background: #d6e4ff; font-weight: 600; }
-    section { margin: 1.5rem 0; }
-    h2 { font-size: 1.15rem; margin-bottom: .5rem; }
-    ul { margin: 0; padding-left: 1.4rem; }
-    li { margin-bottom: .35rem; }
-    .reco { border: 1px solid #e2e8f0; border-radius: 8px; padding: .8rem 1rem; margin-bottom: .8rem; }
-    .reco .topic { font-weight: 600; }
-    .reco a { color: #1e40af; }
+    @page { size: A4; margin: 1.5cm; }
+    body { font-family: "Helvetica", "DejaVu Sans", sans-serif; color: #1f2933; font-size: 11pt; }
+    h1 { font-size: 18pt; border-bottom: 2px solid #999; padding-bottom: 4pt; margin-bottom: 8pt; }
+    h2 { font-size: 13pt; margin-top: 14pt; margin-bottom: 6pt; color: #1d4ed8; }
+    .meta { color: #444; font-size: 10pt; margin-bottom: 10pt; line-height: 1.5; }
+    .pill { display: inline-block; padding: 2pt 8pt; border-radius: 10pt; background: #d6e4ff; font-weight: bold; font-size: 11pt; }
+    .question { border: 1px solid #ccc; border-radius: 4pt; padding: 8pt 10pt; margin-bottom: 8pt; }
+    .question .header { font-weight: bold; margin-bottom: 4pt; }
+    .question .label { color: #555; font-size: 9pt; text-transform: uppercase; letter-spacing: .3pt; margin-top: 4pt; }
+    .question .value { margin-top: 1pt; white-space: pre-wrap; }
+    .question .score { float: right; padding: 2pt 6pt; border-radius: 4pt; background: #e2e8f0; font-weight: bold; }
+    .reco { border-left: 3pt solid #1d4ed8; padding: 4pt 8pt; margin-bottom: 6pt; background: #f4f7ff; }
+    .reco .topic { font-weight: bold; }
+    .empty { color: #777; font-style: italic; }
   </style>
 </head>
 <body>
   <h1>Отчёт по тестированию</h1>
   <div class="meta">
-    <div>Report ID: <code>{{ report.id }}</code></div>
-    <div>Attempt: <code>{{ report.attempt_id }}</code></div>
-    <div>User: <code>{{ report.user_id }}</code></div>
-    <div>Дата: {{ report.created_at }}</div>
-    <div>Оценка: <span class="score">{{ "%.1f"|format(report.score) }}/100</span></div>
+    <div><strong>Тест:</strong> {{ test.title or "—" }}</div>
+    {% if test.description %}<div><strong>Описание:</strong> {{ test.description }}</div>{% endif %}
+    <div><strong>Участник:</strong> {{ participant.full_name or "—" }}{% if participant.email %} ({{ participant.email }}){% endif %}</div>
+    {% if participant.department %}<div><strong>Подразделение:</strong> {{ participant.department }}</div>{% endif %}
+    {% if participant.position %}<div><strong>Должность:</strong> {{ participant.position }}</div>{% endif %}
+    <div><strong>Дата:</strong> {{ report.created_at.strftime('%Y-%m-%d %H:%M') if report.created_at else "" }}</div>
+    <div style="margin-top: 6pt;"><strong>Итоговая оценка:</strong>
+      <span class="pill">{{ "%.1f"|format(report.score) }} / 1.0</span>
+    </div>
   </div>
 
-  {% if data.strengths %}
-  <section>
-    <h2>Сильные стороны</h2>
-    <ul>{% for s in data.strengths %}<li>{{ s }}</li>{% endfor %}</ul>
-  </section>
+  <h2>Ответы по вопросам</h2>
+  {% if items %}
+    {% for q in items %}
+      <div class="question">
+        <div class="header">
+          <span class="score">{{ "%.1f"|format(q.score) }}</span>
+          {{ loop.index }}. {{ q.text }}
+        </div>
+        <div class="label">Правильный ответ</div>
+        <div class="value">{{ q.correct_answer }}</div>
+        <div class="label">Ответ пользователя</div>
+        <div class="value">{{ q.user_answer or "(нет ответа)" }}</div>
+        {% if q.feedback %}
+          <div class="label">Комментарий ИИ</div>
+          <div class="value">{{ q.feedback }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">Нет данных по вопросам.</div>
   {% endif %}
 
-  {% if data.weaknesses %}
-  <section>
-    <h2>Слабые стороны</h2>
-    <ul>{% for w in data.weaknesses %}<li>{{ w }}</li>{% endfor %}</ul>
-  </section>
-  {% endif %}
-
-  {% if report.recommendations %}
-  <section>
-    <h2>Что изучить</h2>
-    {% for r in report.recommendations %}
+  <h2>Рекомендации к изучению</h2>
+  {% if recommendations %}
+    {% for r in recommendations %}
       <div class="reco">
         <div class="topic">{{ r.topic }}</div>
         <div>{{ r.reason }}</div>
-        {% if r.resource_url %}<div><a href="{{ r.resource_url }}">{{ r.resource_url }}</a></div>{% endif %}
+        {% if r.resource_url %}<div>Материалы: {{ r.resource_url }}</div>{% endif %}
       </div>
     {% endfor %}
-  </section>
+  {% else %}
+    <div class="empty">Рекомендаций нет — результаты в пределах ожиданий.</div>
   {% endif %}
 </body>
 </html>

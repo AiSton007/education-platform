@@ -80,7 +80,27 @@ class AuthService:
         user = await self._users.get_by_email(email)
         if not user or not _verify_password(password, user.password_hash):
             raise Unauthorized("Invalid email or password")
+
+        try:
+            status = await self._user_client.get_status(user.id)
+        except Exception:
+            # Avoid blocking logins if user-service is temporarily unreachable.
+            _log.warning("user_status_lookup_failed", user_id=str(user.id))
+            status = None
+        if status is not None and not status.get("is_active", True):
+            raise Unauthorized("Account is deactivated")
+
         return await self._issue_pair(user)
+
+    async def reset_password(self, *, user_id: uuid.UUID, new_password: str) -> User:
+        user = await self._users.get_by_id(user_id)
+        if user is None:
+            raise NotFound("User not found")
+        user.password_hash = _hash_password(new_password, rounds=self._settings.bcrypt_rounds)
+        await self._refresh.revoke_all_for_user(user_id)
+        await self._session.commit()
+        business_events.labels(service="auth-service", event="password_reset").inc()
+        return user
 
     async def refresh(self, *, refresh_token: str) -> tuple[User, str, str, int, int]:
         payload = decode_token(self._settings, refresh_token, expected_type="refresh")

@@ -15,7 +15,9 @@ from pkg.logger import get_logger
 from pkg.metrics import business_events, business_latency
 from services.test_service.app.clients.llm_service import LlmServiceClient
 from services.test_service.app.clients.report_service import ReportServiceClient
-from services.test_service.app.models import Attempt, AttemptStatus, Question, QuestionType, Test
+from services.test_service.app.clients.user_service import UserServiceClient
+from services.test_service.app.models import Attempt, AttemptStatus, Question, Test
+from services.test_service.app.repositories.assignments import AssignmentRepository
 from services.test_service.app.repositories.attempts import AttemptRepository
 from services.test_service.app.repositories.tests import TestRepository
 
@@ -29,22 +31,26 @@ class AttemptsService:
         session: AsyncSession,
         llm_client: LlmServiceClient,
         report_client: ReportServiceClient,
+        user_client: UserServiceClient,
     ) -> None:
         self._session = session
         self._tests = TestRepository(session)
         self._attempts = AttemptRepository(session)
+        self._assignments = AssignmentRepository(session)
         self._llm = llm_client
         self._report = report_client
+        self._users = user_client
 
     # ----- start / answers -----
 
     async def start(self, *, test_id: uuid.UUID, user_id: uuid.UUID) -> Attempt:
-        test = await self._tests.get(test_id, with_options=True)
+        test = await self._tests.get(test_id)
         if test is None:
             raise NotFound("Test not found")
         if not test.is_active:
             raise ValidationFailed("Test is not active")
         attempt = await self._attempts.create(test_id=test_id, user_id=user_id)
+        await self._assignments.mark_in_progress(test_id=test_id, user_id=user_id)
         await self._session.commit()
         business_events.labels(service="test-service", event="attempt_started").inc()
         return attempt
@@ -78,7 +84,7 @@ class AttemptsService:
         if attempt.status not in (AttemptStatus.STARTED, AttemptStatus.SUBMITTED):
             raise ValidationFailed(f"Attempt cannot be submitted from status '{attempt.status.value}'")
 
-        test = await self._tests.get(attempt.test_id, with_options=True)
+        test = await self._tests.get(attempt.test_id)
         if test is None:
             raise NotFound("Underlying test not found")
 
@@ -89,20 +95,38 @@ class AttemptsService:
         with business_latency.labels(service="test-service", event="submit_flow").time():
             try:
                 analysis = await self._call_llm(test, attempt)
+                result_data = analysis.get("result") or {}
+                per_question = result_data.get("per_question", []) or []
+                overall_score = _coerce_score(
+                    result_data.get("overall_score", analysis.get("score", 0.0))
+                )
+
+                await self._attempts.update_answer_scores(attempt.id, per_question)
                 attempt = await self._attempts.mark_status(
                     attempt,
                     status=AttemptStatus.ANALYZED,
                     analysis_id=uuid.UUID(str(analysis["analysis_id"])),
-                    score=float(analysis.get("score", 0.0)),
+                    score=overall_score,
                 )
                 await self._session.commit()
 
-                report = await self._call_report(attempt, analysis)
+                profile = await self._safe_fetch_profile(attempt.user_id)
+                attempt = await self._attempts.get(attempt.id, with_answers=True)
+                report = await self._call_report(
+                    test=test,
+                    attempt=attempt,
+                    analysis=analysis,
+                    overall_score=overall_score,
+                    per_question=per_question,
+                    recommendations=result_data.get("recommendations", []) or [],
+                    profile=profile,
+                )
                 attempt = await self._attempts.mark_status(
                     attempt,
                     status=AttemptStatus.COMPLETED,
                     report_id=uuid.UUID(str(report["id"])),
                 )
+                await self._assignments.mark_completed(test_id=test.id, user_id=user_id)
                 await self._session.commit()
                 business_events.labels(service="test-service", event="attempt_completed").inc()
             except Exception as exc:
@@ -124,9 +148,38 @@ class AttemptsService:
             raise Forbidden("Cannot view foreign attempt")
         return attempt
 
+    async def list_attempts(
+        self,
+        *,
+        user_id: uuid.UUID | None,
+        test_id: uuid.UUID | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[Attempt], int]:
+        return await self._attempts.list_attempts(
+            user_id=user_id, test_id=test_id, limit=limit, offset=offset
+        )
+
+    async def history_for_user(
+        self,
+        user_id: uuid.UUID,
+        *,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[tuple[Attempt, Test]], int]:
+        return await self._attempts.history_for_user(user_id, limit=limit, offset=offset)
+
     # ----- internals -----
 
+    async def _safe_fetch_profile(self, user_id: uuid.UUID) -> dict:
+        try:
+            return await self._users.get_profile(user_id)
+        except Exception:
+            _log.warning("user_profile_lookup_failed", user_id=str(user_id))
+            return {"user_id": str(user_id)}
+
     async def _call_llm(self, test: Test, attempt: Attempt) -> dict:
+        answers_by_question = {str(a.question_id): a for a in attempt.answers}
         payload = {
             "attempt_id": str(attempt.id),
             "user_id": str(attempt.user_id),
@@ -138,36 +191,86 @@ class AttemptsService:
             "questions": [_question_payload(q) for q in test.questions],
             "answers": [
                 {
-                    "question_id": str(a.question_id),
-                    "selected_option_ids": [str(x) for x in (a.selected_option_ids or [])],
-                    "free_text": a.free_text,
+                    "question_id": str(q.id),
+                    "free_text": (
+                        answers_by_question[str(q.id)].free_text
+                        if str(q.id) in answers_by_question
+                        else None
+                    ),
                 }
-                for a in attempt.answers
+                for q in test.questions
             ],
         }
         return await self._llm.analyze(payload)
 
-    async def _call_report(self, attempt: Attempt, analysis: dict) -> dict:
+    async def _call_report(
+        self,
+        *,
+        test: Test,
+        attempt: Attempt,
+        analysis: dict,
+        overall_score: float,
+        per_question: list[dict],
+        recommendations: list[dict],
+        profile: dict,
+    ) -> dict:
+        per_question_by_id = {str(p["question_id"]): p for p in per_question if "question_id" in p}
+        answers_by_question = {str(a.question_id): a for a in attempt.answers}
+        items: list[dict] = []
+        for q in test.questions:
+            qid = str(q.id)
+            ans = answers_by_question.get(qid)
+            pq = per_question_by_id.get(qid, {})
+            items.append(
+                {
+                    "question_id": qid,
+                    "order": q.order,
+                    "text": q.text,
+                    "correct_answer": q.correct_answer,
+                    "user_answer": ans.free_text if ans is not None else None,
+                    "score": _coerce_score(pq.get("score", 0.0)),
+                    "feedback": pq.get("feedback"),
+                }
+            )
+
         payload = {
             "attempt_id": str(attempt.id),
             "user_id": str(attempt.user_id),
             "analysis_id": analysis["analysis_id"],
-            "analysis": analysis.get("result", {}),
-            "score": float(analysis.get("score", 0.0)),
+            "score": overall_score,
+            "test": {
+                "id": str(test.id),
+                "title": test.title,
+                "description": test.description,
+            },
+            "participant": {
+                "user_id": str(attempt.user_id),
+                "email": profile.get("email"),
+                "full_name": profile.get("full_name"),
+                "department": profile.get("department"),
+                "position": profile.get("position"),
+            },
+            "items": items,
+            "recommendations": recommendations,
         }
         return await self._report.create_report(payload)
 
 
 def _question_payload(q: Question) -> dict:
-    base = {
+    return {
         "id": str(q.id),
         "order": q.order,
-        "type": q.type.value,
         "text": q.text,
+        "correct_answer": q.correct_answer,
         "weight": float(q.weight),
     }
-    if q.type in (QuestionType.SINGLE, QuestionType.MULTIPLE):
-        base["options"] = [
-            {"id": str(o.id), "order": o.order, "text": o.text, "is_correct": o.is_correct} for o in q.options
-        ]
-    return base
+
+
+def _coerce_score(value: object) -> float:
+    """Clamp the score to [0.0, 1.0] and round to one decimal."""
+    try:
+        score = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.0
+    score = max(0.0, min(1.0, score))
+    return round(score, 1)

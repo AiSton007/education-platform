@@ -47,3 +47,13 @@ class UserOut(BaseModel):
 
 class MeOut(UserOut):
     pass
+
+
+class AdminResetPasswordIn(BaseModel):
+    user_id: uuid.UUID
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class AdminResetPasswordOut(BaseModel):
+    user_id: uuid.UUID
+    status: str = "ok"

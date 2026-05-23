@@ -19,6 +19,8 @@ def test_router_resolves_known_prefixes() -> None:
     assert router.resolve("/api/v1/users/me") == "http://user:8080"
     assert router.resolve("/api/v1/tests") == "http://test:8080"
     assert router.resolve("/api/v1/attempts/123/submit") == "http://test:8080"
+    assert router.resolve("/api/v1/assignments") == "http://test:8080"
+    assert router.resolve("/api/v1/assignments/me") == "http://test:8080"
     assert router.resolve("/api/v1/reports/abc") == "http://report:8080"
 
 

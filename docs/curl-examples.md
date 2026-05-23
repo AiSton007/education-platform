@@ -1,4 +1,4 @@
-# Happy-path curl-сценарий
+# Happy-path curl-сценарий (free-form testing)
 
 Все запросы идут через `api-gateway` (`http://localhost:18080` локально, `https://api.mokryakov.local` в k8s).
 Заменяй `$GW`, `$ACCESS`, `$TEST_ID`, `$ATTEMPT_ID`, `$REPORT_ID` на свои значения.
@@ -30,10 +30,9 @@ TOKENS=$(curl -s -X POST $GW/api/v1/auth/login \
   -d '{"email":"manager@example.com","password":"manager-pass-12345"}')
 ACCESS=$(echo "$TOKENS" | jq -r .access_token)
 REFRESH=$(echo "$TOKENS" | jq -r .refresh_token)
-echo "$ACCESS"
 ```
 
-## 3. Создание теста (менеджером)
+## 3. Создание теста (свободные вопросы + правильные ответы)
 
 ```bash
 TEST=$(curl -s -X POST $GW/api/v1/tests \
@@ -45,30 +44,13 @@ TEST=$(curl -s -X POST $GW/api/v1/tests \
     "questions": [
       {
         "order": 0,
-        "type": "single",
-        "text": "Что такое 2FA?",
-        "weight": 1,
-        "options": [
-          {"order":0,"text":"Двойной пароль","is_correct":false},
-          {"order":1,"text":"Второй фактор аутентификации","is_correct":true}
-        ]
+        "text": "Что такое 2FA и зачем она нужна?",
+        "correct_answer": "Двухфакторная аутентификация: подтверждение входа вторым фактором (одноразовый код, push, аппаратный токен) дополнительно к паролю; защищает аккаунт при утечке пароля."
       },
       {
         "order": 1,
-        "type": "multiple",
-        "text": "Какие пароли НЕЛЬЗЯ использовать?",
-        "weight": 1,
-        "options": [
-          {"order":0,"text":"qwerty","is_correct":true},
-          {"order":1,"text":"GxR!82Wm@","is_correct":false},
-          {"order":2,"text":"password","is_correct":true}
-        ]
-      },
-      {
-        "order": 2,
-        "type": "free_text",
-        "text": "Опишите политику обработки персональных данных вашего отдела",
-        "weight": 2
+        "text": "Опишите политику обработки персональных данных",
+        "correct_answer": "Обрабатываются только необходимые данные, доступ — по принципу наименьших привилегий, передача наружу — только обезличенно и через утверждённые каналы."
       }
     ]
   }')
@@ -88,61 +70,96 @@ curl -s -X POST $GW/api/v1/auth/register \
     "role":"employee"
   }'
 
+# узнаём её user_id
 EMP_TOKENS=$(curl -s -X POST $GW/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"alice@example.com","password":"alice-pass-12345"}')
 EMP=$(echo "$EMP_TOKENS" | jq -r .access_token)
+EMP_ID=$(curl -s "$GW/api/v1/users/me" -H "Authorization: Bearer $EMP" | jq -r .user_id)
 ```
 
-## 5. Старт попытки и ответы
+## 5. Назначение теста сотруднику (от имени менеджера)
+
+```bash
+curl -s -X POST $GW/api/v1/assignments \
+  -H "Authorization: Bearer $ACCESS" \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"test_id\": \"$TEST_ID\",
+    \"user_ids\": [\"$EMP_ID\"]
+  }" | jq .
+```
+
+## 6. Сотрудник видит назначенные тесты
+
+```bash
+curl -s "$GW/api/v1/assignments/me" -H "Authorization: Bearer $EMP" | jq .
+```
+
+## 7. Старт попытки, свободные ответы, сабмит
 
 ```bash
 ATT=$(curl -s -X POST "$GW/api/v1/tests/$TEST_ID/start" \
   -H "Authorization: Bearer $EMP")
 ATTEMPT_ID=$(echo "$ATT" | jq -r .id)
 
-# Берём вопросы и опции из публичной выдачи (без is_correct).
 QUESTIONS=$(curl -s "$GW/api/v1/tests/$TEST_ID" -H "Authorization: Bearer $EMP" | jq -c .questions)
 
-# Пример: пусть первая опция верная, вторая — неверная и т.д. — для краткости вручную:
 curl -s -X POST "$GW/api/v1/attempts/$ATTEMPT_ID/answers" \
   -H "Authorization: Bearer $EMP" \
   -H 'Content-Type: application/json' \
   -d "$(jq -n --argjson q "$QUESTIONS" '{
     answers: [
-      {question_id: $q[0].id, selected_option_ids: [$q[0].options[1].id]},
-      {question_id: $q[1].id, selected_option_ids: [$q[1].options[0].id, $q[1].options[2].id]},
-      {question_id: $q[2].id, free_text: "Только обезличенные данные обрабатываются вне периметра."}
+      {question_id: $q[0].id, free_text: "Двухфакторная аутентификация — второй фактор для входа"},
+      {question_id: $q[1].id, free_text: "Только обезличенные данные обрабатываются вне периметра"}
     ]
   }')"
-```
 
-## 6. Сабмит — оркестрация LLM + отчёт
-
-```bash
 RES=$(curl -s -X POST "$GW/api/v1/attempts/$ATTEMPT_ID/submit" \
   -H "Authorization: Bearer $EMP")
 echo "$RES" | jq .
 REPORT_ID=$(echo "$RES" | jq -r .report_id)
 ```
 
-## 7. Чтение отчёта
+## 8. Сотрудник смотрит результат и историю
 
 ```bash
+# Детально по попытке (per-question scores + feedback)
+curl -s "$GW/api/v1/attempts/$ATTEMPT_ID" -H "Authorization: Bearer $EMP" | jq .
+
+# История прохождений
+curl -s "$GW/api/v1/attempts/me/history" -H "Authorization: Bearer $EMP" | jq .
+
+# Отчёт
 curl -s "$GW/api/v1/reports/$REPORT_ID" -H "Authorization: Bearer $EMP" | jq .
-curl -s "$GW/api/v1/reports/$REPORT_ID/download?format=html" -H "Authorization: Bearer $EMP" -o report.html
 ```
 
-## 8. Refresh-токен
+## 9. Менеджер: список прохождений и PDF
 
 ```bash
-curl -s -X POST $GW/api/v1/auth/refresh \
+# Все прохождения по тесту
+curl -s "$GW/api/v1/attempts?test_id=$TEST_ID" -H "Authorization: Bearer $ACCESS" | jq .
+
+# PDF отчёт
+curl -s "$GW/api/v1/reports/$REPORT_ID/download?format=pdf" \
+  -H "Authorization: Bearer $ACCESS" -o report.pdf
+```
+
+## 10. Админ: деактивация пользователя и сброс пароля
+
+```bash
+# Деактивация (soft delete)
+curl -s -X DELETE "$GW/api/v1/users/$EMP_ID" -H "Authorization: Bearer $ADMIN" | jq .
+
+# Реактивация
+curl -s -X PATCH "$GW/api/v1/users/$EMP_ID" \
+  -H "Authorization: Bearer $ADMIN" \
   -H 'Content-Type: application/json' \
-  -d "{\"refresh_token\":\"$REFRESH\"}" | jq .
-```
+  -d '{"is_active": true}' | jq .
 
-## 9. Профиль через `/me`
-
-```bash
-curl -s "$GW/api/v1/users/me" -H "Authorization: Bearer $EMP" | jq .
+# Сброс пароля (admin only)
+curl -s -X POST "$GW/api/v1/auth/admin/reset-password" \
+  -H "Authorization: Bearer $ADMIN" \
+  -H 'Content-Type: application/json' \
+  -d "{\"user_id\": \"$EMP_ID\", \"new_password\": \"new-strong-password-123\"}" | jq .
 ```
