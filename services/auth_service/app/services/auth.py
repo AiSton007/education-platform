@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pkg.errors import Conflict, NotFound, Unauthorized
@@ -22,7 +22,6 @@ from services.auth_service.app.models import User, UserRole
 from services.auth_service.app.repositories.refresh_tokens import RefreshTokenRepository
 from services.auth_service.app.repositories.users import UserRepository
 
-_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 _log = get_logger("auth-service.service")
 
 
@@ -56,7 +55,7 @@ class AuthService:
         if existing:
             raise Conflict("User with this email already exists")
 
-        password_hash = _pwd.hash(password)
+        password_hash = _hash_password(password, rounds=self._settings.bcrypt_rounds)
         user = await self._users.create(email=email, password_hash=password_hash, role=role)
 
         try:
@@ -79,7 +78,7 @@ class AuthService:
 
     async def login(self, *, email: str, password: str) -> tuple[User, str, str, int, int]:
         user = await self._users.get_by_email(email)
-        if not user or not _pwd.verify(password, user.password_hash):
+        if not user or not _verify_password(password, user.password_hash):
             raise Unauthorized("Invalid email or password")
         return await self._issue_pair(user)
 
@@ -126,3 +125,18 @@ class AuthService:
             self._settings.jwt_access_token_ttl,
             self._settings.jwt_refresh_token_ttl,
         )
+
+
+def _hash_password(password: str, *, rounds: int) -> str:
+    """Hash password with bcrypt directly (stable across passlib/bcrypt compatibility quirks)."""
+    rounds = max(4, min(rounds, 31))
+    salt = bcrypt.gensalt(rounds=rounds)
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+
+
+def _verify_password(password: str, password_hash: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except ValueError:
+        # Corrupted hash format should fail closed.
+        return False
