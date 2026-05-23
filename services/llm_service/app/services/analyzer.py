@@ -37,13 +37,13 @@ def build_prompt(payload: AnalyzeIn) -> str:
         ans = answers_by_question.get(q.id)
         user_answer = (ans.free_text or "").strip() if ans is not None else ""
         rendered_items.append(
-            (
+
                 f'- question_id: "{q.id}"\n'
                 f"  order: {q.order}\n"
                 f"  question: {q.text}\n"
                 f"  correct_answer: {q.correct_answer}\n"
                 f"  user_answer: {user_answer}\n"
-            )
+
         )
 
     schema = (
