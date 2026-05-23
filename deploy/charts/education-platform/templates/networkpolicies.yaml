@@ -23,10 +23,7 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.networkPolicies.dns.coreDnsNamespace | quote }}
-          podSelector:
-            matchLabels:
-              {{- toYaml .Values.networkPolicies.dns.coreDnsSelector | nindent 14 }}
+              kubernetes.io/metadata.name: kube-system
       ports:
         - protocol: UDP
           port: 53
@@ -35,6 +32,14 @@ spec:
     - to:
         - ipBlock:
             cidr: {{ .Values.networkPolicies.dns.nodeLocalDnsCidr | quote }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 10.96.0.10/32
       ports:
         - protocol: UDP
           port: 53
@@ -94,19 +99,14 @@ metadata:
   name: allow-postgres-egress
   namespace: {{ .Release.Namespace }}
 spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/part-of: education-platform
+  podSelector: {}
   policyTypes:
     - Egress
   egress:
     - to:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.global.postgres.dbNamespace | quote }}
-          podSelector:
-            matchLabels:
-              app.kubernetes.io/name: postgresql
+              kubernetes.io/metadata.name: database
       ports:
         - protocol: TCP
           port: 5432
