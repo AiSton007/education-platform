@@ -60,13 +60,13 @@ services:
     port: 8080
     image:
       repository: auth-service
-      tag: 55f552c
+      tag: e494f68
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: auth-service-migrate
-        tag: 55f552c
+        tag: e494f68
     db:
       existingSecret: auth-db
     env:
@@ -79,13 +79,13 @@ services:
     port: 8080
     image:
       repository: user-service
-      tag: 55f552c
+      tag: e494f68
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: user-service-migrate
-        tag: 55f552c
+        tag: e494f68
     db:
       existingSecret: users-db
     env:
@@ -97,13 +97,13 @@ services:
     port: 8080
     image:
       repository: test-service
-      tag: 55f552c
+      tag: e494f68
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: test-service-migrate
-        tag: 55f552c
+        tag: e494f68
     db:
       existingSecret: tests-db
     env:
@@ -117,13 +117,13 @@ services:
     port: 8080
     image:
       repository: llm-service
-      tag: d55f552c
+      tag: e494f68
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: llm-service-migrate
-        tag: 55f552c
+        tag: e494f68
     db:
       existingSecret: llm-db
     extraEnvFrom:
@@ -139,13 +139,13 @@ services:
     port: 8080
     image:
       repository: report-service
-      tag: 55f552c
+      tag: e494f68
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: report-service-migrate
-        tag: 55f552c
+        tag: e494f68
     db:
       existingSecret: reports-db
     env:
@@ -157,7 +157,7 @@ services:
     port: 8080
     image:
       repository: api-gateway
-      tag: 55f552c
+      tag: e494f68
       pullPolicy: IfNotPresent
     migrate:
       enabled: false
@@ -175,7 +175,7 @@ frontend:
   replicaCount: 1
   image:
     repository: frontend
-    tag: 55f552c
+    tag: e494f68
     pullPolicy: IfNotPresent
 
 ingress:
