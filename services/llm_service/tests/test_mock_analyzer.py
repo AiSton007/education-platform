@@ -37,7 +37,11 @@ def _make_payload(*pairs: tuple[str, str, str]) -> AnalyzeIn:
 @pytest.mark.asyncio
 async def test_mock_returns_per_question_scores_in_range() -> None:
     payload = _make_payload(
-        ("Что такое CIA?", "Confidentiality Integrity Availability", "confidentiality integrity availability"),
+        (
+            "Что такое CIA?",
+            "Confidentiality Integrity Availability",
+            "confidentiality integrity availability",
+        ),
         ("Что такое 2FA?", "second authentication factor", ""),
     )
     analyzer = MockAnalyzer()

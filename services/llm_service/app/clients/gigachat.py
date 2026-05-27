@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001
 """GigaChat LLM provider.
 
 Implements the two-step flow:

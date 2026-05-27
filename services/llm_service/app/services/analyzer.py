@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001
 """Analysis orchestrator (within llm-service).
 
 Builds the prompt from the incoming payload, delegates to the configured provider, stores

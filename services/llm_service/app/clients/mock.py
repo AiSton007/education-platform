@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001
 """Deterministic mock LLM provider — used by default in dev/tests.
 
 Until the real GigaChat connection is wired in, this provider grades each user answer with
