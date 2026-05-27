@@ -4,7 +4,11 @@ ARG NODE_VERSION=22
 FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund
+RUN if [ -f package-lock.json ]; then \
+      npm ci --no-audit --no-fund; \
+    else \
+      npm install --no-audit --no-fund; \
+    fi
 
 COPY . .
 ARG VITE_API_URL=http://localhost:18080

@@ -11,7 +11,6 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from xhtml2pdf import pisa
 
 from pkg.errors import Forbidden, UpstreamError
 from pkg.logger import get_logger
@@ -115,6 +114,12 @@ async def download_report(
             content=html,
             headers={"Content-Disposition": f'attachment; filename="report-{report.id}.html"'},
         )
+
+    try:
+        from xhtml2pdf import pisa
+    except Exception as exc:
+        _log.error("pdf_backend_unavailable", report_id=str(report.id), err=str(exc))
+        raise UpstreamError("PDF backend is not available in current environment") from exc
 
     pdf_buffer = io.BytesIO()
     status_code = pisa.CreatePDF(src=io.StringIO(html), dest=pdf_buffer, encoding="utf-8")

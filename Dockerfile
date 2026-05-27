@@ -14,7 +14,19 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential libpq-dev curl ca-certificates \
+        build-essential \
+        libpq-dev \
+        curl \
+        ca-certificates \
+        pkg-config \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libgdk-pixbuf-2.0-dev \
+        libffi-dev \
+        shared-mime-info \
+        fontconfig \
+        zlib1g-dev \
+        libjpeg-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (pinned via pip for reproducibility — could also use the official installer)
@@ -41,12 +53,25 @@ ENV SERVICE=${SERVICE} \
     PATH="/opt/venv/bin:${PATH}" \
     VIRTUAL_ENV=/opt/venv
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libpq5 curl tini \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system --gid 65532 app \
-    && useradd  --system --uid 65532 --gid app --home /home/app --shell /usr/sbin/nologin app \
-    && mkdir -p /home/app && chown -R app:app /home/app
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends libpq5 curl tini; \
+    if [ "$SERVICE" = "report_service" ]; then \
+        apt-get install -y --no-install-recommends \
+            libcairo2 \
+            libpango-1.0-0 \
+            libgdk-pixbuf-2.0-0 \
+            libffi8 \
+            shared-mime-info \
+            fontconfig \
+            zlib1g \
+            libjpeg62-turbo; \
+    fi; \
+    rm -rf /var/lib/apt/lists/*; \
+    groupadd --system --gid 65532 app; \
+    useradd --system --uid 65532 --gid app --home /home/app --shell /usr/sbin/nologin app; \
+    mkdir -p /home/app; \
+    chown -R app:app /home/app
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=builder /workspace /workspace
