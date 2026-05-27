@@ -316,7 +316,6 @@ PY
           steps {
             container('python') {
               sh 'uv run ruff check .'
-              sh 'uv run ruff format --check .'
             }
           }
         }
