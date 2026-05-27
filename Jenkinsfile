@@ -122,6 +122,7 @@ spec:
           sh '''
             set -eux
             test -f Jenkinsfile
+            test -f Dockerfile.base-python
             test -f Dockerfile
             test -f Dockerfile.migrate
             test -f "$VALUES_FILE"
@@ -368,8 +369,34 @@ EOF_AUTH
       }
     }
 
+    stage('Build & push python base image') {
+      when { expression { env.SKIP_PIPELINE != 'true' } }
+      options {
+        timeout(time: 30, unit: 'MINUTES')
+      }
+      steps {
+        container('kaniko') {
+          sh '''
+            set -eux
+            /kaniko/executor \
+              --context "$WORKSPACE" \
+              --dockerfile "$WORKSPACE/Dockerfile.base-python" \
+              --destination "$HARBOR/$HARBOR_PROJECT/education-python-base:$SHA" \
+              --destination "$HARBOR/$HARBOR_PROJECT/education-python-base:3.12" \
+              --destination "$HARBOR/$HARBOR_PROJECT/education-python-base:latest" \
+              --cache=false \
+              --skip-tls-verify-registry "$HARBOR" \
+              --insecure-registry "$HARBOR"
+          '''
+        }
+      }
+    }
+
     stage('Build & push backend images') {
       when { expression { env.SKIP_PIPELINE != 'true' } }
+      options {
+        timeout(time: 90, unit: 'MINUTES')
+      }
       steps {
         container('kaniko') {
           sh '''
@@ -383,6 +410,7 @@ EOF_AUTH
                 --context "$WORKSPACE" \
                 --dockerfile "$WORKSPACE/Dockerfile" \
                 --build-arg SERVICE="$service" \
+                --build-arg PYTHON_BASE_IMAGE="$HARBOR/$HARBOR_PROJECT/education-python-base:3.12" \
                 --destination "$HARBOR/$HARBOR_PROJECT/$image_name:$SHA" \
                 --destination "$HARBOR/$HARBOR_PROJECT/$image_name:latest" \
                 --cache=false \
@@ -394,6 +422,7 @@ EOF_AUTH
                   --context "$WORKSPACE" \
                   --dockerfile "$WORKSPACE/Dockerfile.migrate" \
                   --build-arg SERVICE="$service" \
+                  --build-arg PYTHON_BASE_IMAGE="$HARBOR/$HARBOR_PROJECT/education-python-base:3.12" \
                   --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:$SHA" \
                   --destination "$HARBOR/$HARBOR_PROJECT/$image_name-migrate:latest" \
                   --cache=false \
@@ -412,6 +441,9 @@ EOF_AUTH
           expression { env.SKIP_PIPELINE != 'true' }
           expression { fileExists('frontend/Dockerfile') }
         }
+      }
+      options {
+        timeout(time: 30, unit: 'MINUTES')
       }
       steps {
         container('kaniko') {
