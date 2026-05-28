@@ -6,6 +6,7 @@ export function ManagerTestsPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<TestSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   function reload() {
     setError(null);
@@ -40,6 +41,14 @@ export function ManagerTestsPage() {
     }
   }
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredItems = (items ?? []).filter((t) => {
+    if (!normalizedQuery) return true;
+    const title = t.title.toLowerCase();
+    const description = (t.description ?? "").toLowerCase();
+    return title.includes(normalizedQuery) || description.includes(normalizedQuery);
+  });
+
   return (
     <div className="card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -51,6 +60,21 @@ export function ManagerTestsPage() {
       {error && <div className="error">{error}</div>}
       {items === null && <p>Загрузка…</p>}
       {items?.length === 0 && <p className="muted">Пока ни одного теста.</p>}
+
+      <div className="filters">
+        <label>Поиск тестов</label>
+        <input
+          type="search"
+          placeholder="Название или описание..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
+      {items !== null && filteredItems.length === 0 && (
+        <p className="muted">По вашему запросу тесты не найдены.</p>
+      )}
+
       <table className="table">
         <thead>
           <tr>
@@ -62,7 +86,7 @@ export function ManagerTestsPage() {
           </tr>
         </thead>
         <tbody>
-          {items?.map((t) => (
+          {filteredItems.map((t) => (
             <tr key={t.id}>
               <td>
                 <strong>{t.title}</strong>

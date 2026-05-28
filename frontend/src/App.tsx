@@ -13,6 +13,7 @@ import { ManagerAttemptDetailPage } from "./pages/ManagerAttemptDetailPage";
 import { ManagerAssignTestPage } from "./pages/ManagerAssignTestPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AttemptResultPage } from "./pages/AttemptResultPage";
+import { ProfilePage } from "./pages/ProfilePage";
 
 function logout() {
   localStorage.removeItem("access_token");
@@ -63,6 +64,7 @@ function Nav() {
             </>
           )}
           {role === "admin" && <Link to="/admin/users">Пользователи</Link>}
+          <Link to="/profile">Профиль</Link>
           <a href="#" onClick={logout}>Выход</a>
         </>
       ) : (
@@ -128,6 +130,14 @@ export function App() {
             element={
               <Guard roles={["employee", "manager", "admin"]}>
                 <ReportPage />
+              </Guard>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <Guard roles={["employee", "manager", "admin"]}>
+                <ProfilePage />
               </Guard>
             }
           />
