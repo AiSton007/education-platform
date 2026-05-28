@@ -108,6 +108,16 @@ spec:
               env.SKIP_PIPELINE = 'false'
             }
 
+            def baseChanged = true
+            if (sh(returnStatus: true, script: 'git rev-parse --verify HEAD~1 >/dev/null 2>&1') == 0) {
+              baseChanged = (sh(
+                returnStatus: true,
+                script: 'git diff --quiet HEAD~1 HEAD -- Dockerfile.base-python'
+              ) != 0)
+            }
+            env.BUILD_PY_BASE = baseChanged ? 'true' : 'false'
+            echo "Dockerfile.base-python changed: ${env.BUILD_PY_BASE}"
+
             echo "Building image tag: ${env.SHA}"
           }
         }
@@ -370,7 +380,12 @@ EOF_AUTH
     }
 
     stage('Build & push python base image') {
-      when { expression { env.SKIP_PIPELINE != 'true' } }
+      when {
+        allOf {
+          expression { env.SKIP_PIPELINE != 'true' }
+          expression { env.BUILD_PY_BASE == 'true' }
+        }
+      }
       options {
         timeout(time: 30, unit: 'MINUTES')
       }
