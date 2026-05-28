@@ -11,6 +11,8 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 from pkg.errors import Forbidden, UpstreamError
 from pkg.logger import get_logger
@@ -36,6 +38,20 @@ _template_env = Environment(
     loader=FileSystemLoader(str(Path(__file__).resolve().parent.parent / "templates")),
     autoescape=select_autoescape(["html", "j2"]),
 )
+
+
+def _register_pdf_fonts() -> None:
+    """Ensure xhtml2pdf can render Cyrillic text with DejaVu Sans."""
+    regular_name = "DejaVuSans"
+    bold_name = "DejaVuSans-Bold"
+    if regular_name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(
+            TTFont(regular_name, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+        )
+    if bold_name not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(
+            TTFont(bold_name, "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+        )
 
 
 @router.post(
@@ -120,6 +136,12 @@ async def download_report(
     except Exception as exc:
         _log.error("pdf_backend_unavailable", report_id=str(report.id), err=str(exc))
         raise UpstreamError("PDF backend is not available in current environment") from exc
+
+    try:
+        _register_pdf_fonts()
+    except Exception as exc:
+        _log.error("pdf_font_registration_failed", report_id=str(report.id), err=str(exc))
+        raise UpstreamError("PDF font setup failed in current environment") from exc
 
     pdf_buffer = io.BytesIO()
     status_code = pisa.CreatePDF(src=io.StringIO(html), dest=pdf_buffer, encoding="utf-8")
