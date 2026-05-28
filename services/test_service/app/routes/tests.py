@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from pkg.errors import Forbidden
 from services.test_service.app.deps import CurrentUserDep, get_tests_service
@@ -63,15 +63,20 @@ async def update_test(
     return _serialize_admin(test)
 
 
-@router.delete("/{test_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{test_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def delete_test(
     test_id: uuid.UUID,
     user: CurrentUserDep,
     service: Annotated[TestsService, Depends(get_tests_service)],
-) -> None:
+) -> Response:
     if user.role not in _AUTHORS:
         raise Forbidden("Only managers and admins can delete tests")
     await service.delete(test_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("", response_model=TestsList)

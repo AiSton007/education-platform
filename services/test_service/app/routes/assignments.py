@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from pkg.errors import Forbidden
 from services.test_service.app.deps import CurrentUserDep, get_assignments_service
@@ -43,15 +43,20 @@ async def create_assignments(
     return [AssignmentOut.model_validate(i) for i in items]
 
 
-@router.delete("/assignments/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/assignments/{assignment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def revoke_assignment(
     assignment_id: uuid.UUID,
     user: CurrentUserDep,
     service: Annotated[AssignmentsService, Depends(get_assignments_service)],
-) -> None:
+) -> Response:
     if user.role not in _AUTHORS:
         raise Forbidden("Only managers and admins can revoke assignments")
     await service.revoke(assignment_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/tests/{test_id}/assignments", response_model=list[AssignmentOut])
