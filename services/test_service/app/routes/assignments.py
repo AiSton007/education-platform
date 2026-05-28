@@ -84,8 +84,8 @@ async def list_my_assignments(
             title=t.title,
             description=t.description,
             due_date=a.due_date,
-            questions_count=len(t.questions),
+            questions_count=questions_count,
         )
-        for a, t in rows
+        for a, t, questions_count in rows
     ]
     return AvailableTestsList(items=items)

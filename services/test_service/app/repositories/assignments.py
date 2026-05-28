@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.test_service.app.models import Assignment, AssignmentStatus, Test
+from services.test_service.app.models import Assignment, AssignmentStatus, Question, Test
 
 
 class AssignmentRepository:
@@ -51,9 +51,15 @@ class AssignmentRepository:
         items = (await self._session.execute(ids_stmt)).scalars().all()
         return list(items)
 
-    async def list_for_user(self, user_id: uuid.UUID) -> list[tuple[Assignment, Test]]:
+    async def list_for_user(self, user_id: uuid.UUID) -> list[tuple[Assignment, Test, int]]:
+        questions_count_subquery = (
+            select(func.count())
+            .select_from(Question)
+            .where(Question.test_id == Test.id)
+            .scalar_subquery()
+        )
         stmt = (
-            select(Assignment, Test)
+            select(Assignment, Test, questions_count_subquery.label("questions_count"))
             .join(Test, Test.id == Assignment.test_id)
             .where(
                 Assignment.user_id == user_id,
@@ -63,7 +69,7 @@ class AssignmentRepository:
             .order_by(Assignment.due_date.asc().nullslast(), Assignment.assigned_at.desc())
         )
         rows = (await self._session.execute(stmt)).all()
-        return [(row[0], row[1]) for row in rows]
+        return [(row[0], row[1], int(row[2] or 0)) for row in rows]
 
     async def list_for_test(self, test_id: uuid.UUID) -> list[Assignment]:
         stmt = select(Assignment).where(Assignment.test_id == test_id)

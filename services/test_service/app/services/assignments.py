@@ -42,7 +42,7 @@ class AssignmentsService:
     async def list_for_test(self, test_id: uuid.UUID) -> list[Assignment]:
         return await self._repo.list_for_test(test_id)
 
-    async def list_for_user(self, user_id: uuid.UUID) -> list[tuple[Assignment, Test]]:
+    async def list_for_user(self, user_id: uuid.UUID) -> list[tuple[Assignment, Test, int]]:
         return await self._repo.list_for_user(user_id)
 
     async def revoke(self, assignment_id: uuid.UUID) -> None:
