@@ -26,6 +26,10 @@ class AnalysisStatus(StrEnum):
     FAILED = "failed"
 
 
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
+    return [item.value for item in enum_cls]
+
+
 class Analysis(Base):
     __tablename__ = "analyses"
 
@@ -33,7 +37,14 @@ class Analysis(Base):
     attempt_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     status: Mapped[AnalysisStatus] = mapped_column(
-        Enum(AnalysisStatus, name="analysis_status", schema=SCHEMA, native_enum=True),
+        Enum(
+            AnalysisStatus,
+            name="analysis_status",
+            schema=SCHEMA,
+            native_enum=True,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=AnalysisStatus.PENDING,
         nullable=False,
     )

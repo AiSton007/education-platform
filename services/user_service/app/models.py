@@ -25,6 +25,10 @@ class Role(StrEnum):
     ADMIN = "admin"
 
 
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
+    return [item.value for item in enum_cls]
+
+
 class Profile(Base):
     __tablename__ = "profiles"
 
@@ -34,7 +38,14 @@ class Profile(Base):
     department: Mapped[str | None] = mapped_column(String(255), nullable=True)
     position: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[Role] = mapped_column(
-        Enum(Role, name="user_role", schema=SCHEMA, native_enum=True),
+        Enum(
+            Role,
+            name="user_role",
+            schema=SCHEMA,
+            native_enum=True,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=Role.EMPLOYEE,
         nullable=False,
     )

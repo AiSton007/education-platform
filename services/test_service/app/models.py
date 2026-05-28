@@ -56,6 +56,10 @@ class AssignmentStatus(StrEnum):
     COMPLETED = "completed"
 
 
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
+    return [item.value for item in enum_cls]
+
+
 class Test(Base):
     __tablename__ = "tests"
 
@@ -90,7 +94,14 @@ class Question(Base):
     )
     order: Mapped[int] = mapped_column(Integer, nullable=False)
     type: Mapped[QuestionType] = mapped_column(
-        Enum(QuestionType, name="question_type", schema=SCHEMA, native_enum=True),
+        Enum(
+            QuestionType,
+            name="question_type",
+            schema=SCHEMA,
+            native_enum=True,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=QuestionType.FREE_TEXT,
         nullable=False,
     )
@@ -113,7 +124,14 @@ class Attempt(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     status: Mapped[AttemptStatus] = mapped_column(
-        Enum(AttemptStatus, name="attempt_status", schema=SCHEMA, native_enum=True),
+        Enum(
+            AttemptStatus,
+            name="attempt_status",
+            schema=SCHEMA,
+            native_enum=True,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=AttemptStatus.STARTED,
         nullable=False,
     )
@@ -172,7 +190,14 @@ class Assignment(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     assigned_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     status: Mapped[AssignmentStatus] = mapped_column(
-        Enum(AssignmentStatus, name="assignment_status", schema=SCHEMA, native_enum=True),
+        Enum(
+            AssignmentStatus,
+            name="assignment_status",
+            schema=SCHEMA,
+            native_enum=True,
+            values_callable=_enum_values,
+            validate_strings=True,
+        ),
         default=AssignmentStatus.ASSIGNED,
         nullable=False,
     )
