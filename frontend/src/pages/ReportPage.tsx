@@ -14,6 +14,8 @@ export function ReportPage() {
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    setError(null);
+    setReport(null);
     getReport(id)
       .then(setReport)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

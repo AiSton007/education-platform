@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { register, Role } from "../api";
+import { register } from "../api";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -10,7 +10,6 @@ export function RegisterPage() {
     full_name: "",
     department: "",
     position: "",
-    role: "employee" as Role,
   });
   const [ok, setOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +35,8 @@ export function RegisterPage() {
     <div className="card">
       <h2>Регистрация</h2>
       <p className="muted">
-        Новые учетные записи создаются как <strong>employee</strong>. Для назначения роли менеджера
-        или администратора обратитесь к администратору платформы.
+        Новые учетные записи всегда создаются с ролью <strong>employee</strong>. Для назначения роли
+        менеджера или администратора обратитесь к администратору платформы.
       </p>
       {ok && <div className="ok">Готово, перенаправляем на вход…</div>}
       <form onSubmit={onSubmit}>
@@ -49,12 +48,6 @@ export function RegisterPage() {
         <input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
         <label>Должность</label>
         <input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-        <label>Роль</label>
-        <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-          <option value="employee">employee</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-        </select>
         <label>Пароль</label>
         <input
           type="password"

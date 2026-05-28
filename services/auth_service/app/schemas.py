@@ -16,7 +16,6 @@ class RegisterIn(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     department: str | None = Field(default=None, max_length=255)
     position: str | None = Field(default=None, max_length=255)
-    role: UserRole = Field(default=UserRole.EMPLOYEE)
 
 
 class LoginIn(BaseModel):

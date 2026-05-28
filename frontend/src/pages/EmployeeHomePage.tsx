@@ -17,6 +17,7 @@ export function EmployeeHomePage({ tab = "available" }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setError(null);
     Promise.all([myAssignments(), myHistory()])
       .then(([a, h]) => {
         setAvailable(a.items);

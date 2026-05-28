@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, status
 
 from pkg.errors import Forbidden
 from services.auth_service.app.deps import CurrentUserDep, get_auth_service
+from services.auth_service.app.models import UserRole
 from services.auth_service.app.schemas import (
     AdminResetPasswordIn,
     AdminResetPasswordOut,
@@ -35,7 +36,7 @@ async def register(
         full_name=payload.full_name,
         department=payload.department,
         position=payload.position,
-        role=payload.role,
+        role=UserRole.EMPLOYEE,
     )
     return UserOut.model_validate(user)
 

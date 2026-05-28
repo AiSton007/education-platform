@@ -21,6 +21,9 @@ export function TakeTestPage() {
   useEffect(() => {
     (async () => {
       try {
+        setError(null);
+        setTest(null);
+        setAttempt(null);
         const t = await getTest(id);
         setTest(t as Test);
         const a = await startAttempt(id);

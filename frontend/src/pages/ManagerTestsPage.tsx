@@ -8,6 +8,7 @@ export function ManagerTestsPage() {
   const [error, setError] = useState<string | null>(null);
 
   function reload() {
+    setError(null);
     listTests({ active_only: false })
       .then((r) => setItems(r.items))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

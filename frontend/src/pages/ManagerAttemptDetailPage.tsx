@@ -22,6 +22,10 @@ export function ManagerAttemptDetailPage() {
   useEffect(() => {
     (async () => {
       try {
+        setError(null);
+        setAttempt(null);
+        setReport(null);
+        setParticipant(null);
         const a = await getAttempt(id);
         setAttempt(a);
         const tasks: Promise<unknown>[] = [];

@@ -11,6 +11,9 @@ export function AttemptResultPage() {
   useEffect(() => {
     (async () => {
       try {
+        setError(null);
+        setAttempt(null);
+        setReport(null);
         const a = await getAttempt(id);
         setAttempt(a);
         if (a.report_id) {

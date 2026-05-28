@@ -13,6 +13,7 @@ export function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
 
   function reload() {
+    setError(null);
     listUsers()
       .then((r) => setUsers(r.items))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

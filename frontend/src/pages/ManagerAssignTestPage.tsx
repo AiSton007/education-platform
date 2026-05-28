@@ -23,6 +23,7 @@ export function ManagerAssignTestPage() {
   const [dueDate, setDueDate] = useState("");
 
   async function reload() {
+    setError(null);
     try {
       const [t, u, a] = await Promise.all([
         getTest(id),

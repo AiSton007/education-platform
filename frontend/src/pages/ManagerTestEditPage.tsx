@@ -31,6 +31,7 @@ export function ManagerTestEditPage({ mode }: Props) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    setError(null);
     if (mode === "edit" && id) {
       getTest(id)
         .then((t) => {

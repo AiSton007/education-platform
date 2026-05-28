@@ -18,6 +18,7 @@ export function ManagerAttemptsPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function reload() {
+    setError(null);
     try {
       const r = await listAttempts({
         test_id: testFilter || undefined,

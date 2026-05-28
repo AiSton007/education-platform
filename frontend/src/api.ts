@@ -222,7 +222,6 @@ export const register = (payload: {
   full_name: string;
   department?: string;
   position?: string;
-  role?: Role;
 }) => api.post("/api/v1/auth/register", payload).then((r) => r.data);
 
 export const fetchMe = () => api.get<Me>("/api/v1/users/me").then((r) => r.data);

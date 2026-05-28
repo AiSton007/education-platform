@@ -21,6 +21,7 @@ RUN apt-get update \
         libffi-dev \
         shared-mime-info \
         fontconfig \
+        fonts-dejavu-core \
         zlib1g-dev \
         libjpeg-dev \
         tini \
