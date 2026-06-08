@@ -72,13 +72,13 @@ services:
     port: 8080
     image:
       repository: auth-service
-      tag: fc02890
+      tag: 62ca26e
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: auth-service-migrate
-        tag: fc02890
+        tag: 62ca26e
     db:
       existingSecret: auth-db
     env:
@@ -91,13 +91,13 @@ services:
     port: 8080
     image:
       repository: user-service
-      tag: fc02890
+      tag: 62ca26e
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: user-service-migrate
-        tag: fc02890
+        tag: 62ca26e
     db:
       existingSecret: users-db
     env:
@@ -109,13 +109,13 @@ services:
     port: 8080
     image:
       repository: test-service
-      tag: fc02890
+      tag: 62ca26e
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: test-service-migrate
-        tag: fc02890
+        tag: 62ca26e
     db:
       existingSecret: tests-db
     env:
@@ -132,13 +132,13 @@ services:
     port: 8080
     image:
       repository: llm-service
-      tag: fc02890
+      tag: 62ca26e
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: llm-service-migrate
-        tag: fc02890
+        tag: 62ca26e
     db:
       existingSecret: llm-db
     extraEnvFrom:
@@ -176,13 +176,13 @@ services:
     port: 8080
     image:
       repository: report-service
-      tag: fc02890
+      tag: 62ca26e
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: report-service-migrate
-        tag: fc02890
+        tag: 62ca26e
     db:
       existingSecret: reports-db
     env:
@@ -194,7 +194,7 @@ services:
     port: 8080
     image:
       repository: api-gateway
-      tag: fc02890
+      tag: 62ca26e
       pullPolicy: IfNotPresent
     migrate:
       enabled: false
@@ -212,7 +212,7 @@ frontend:
   replicaCount: 1
   image:
     repository: frontend
-    tag: fc02890
+    tag: 62ca26e
     pullPolicy: IfNotPresent
 
 ingress:
