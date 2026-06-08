@@ -68,13 +68,13 @@ services:
     port: 8080
     image:
       repository: auth-service
-      tag: 3120ded
+      tag: c15c7f1
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: auth-service-migrate
-        tag: 3120ded
+        tag: c15c7f1
     db:
       existingSecret: auth-db
     env:
@@ -87,13 +87,13 @@ services:
     port: 8080
     image:
       repository: user-service
-      tag: 3120ded
+      tag: c15c7f1
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: user-service-migrate
-        tag: 3120ded
+        tag: c15c7f1
     db:
       existingSecret: users-db
     env:
@@ -105,13 +105,13 @@ services:
     port: 8080
     image:
       repository: test-service
-      tag: 3120ded
+      tag: c15c7f1
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: test-service-migrate
-        tag: 3120ded
+        tag: c15c7f1
     db:
       existingSecret: tests-db
     env:
@@ -128,13 +128,13 @@ services:
     port: 8080
     image:
       repository: llm-service
-      tag: 3120ded
+      tag: c15c7f1
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: llm-service-migrate
-        tag: 3120ded
+        tag: c15c7f1
     db:
       existingSecret: llm-db
     extraEnvFrom:
@@ -164,13 +164,13 @@ services:
     port: 8080
     image:
       repository: report-service
-      tag: 3120ded
+      tag: c15c7f1
       pullPolicy: IfNotPresent
     migrate:
       enabled: true
       image:
         repository: report-service-migrate
-        tag: 3120ded
+        tag: c15c7f1
     db:
       existingSecret: reports-db
     env:
@@ -182,7 +182,7 @@ services:
     port: 8080
     image:
       repository: api-gateway
-      tag: 3120ded
+      tag: c15c7f1
       pullPolicy: IfNotPresent
     migrate:
       enabled: false
@@ -200,7 +200,7 @@ frontend:
   replicaCount: 1
   image:
     repository: frontend
-    tag: 3120ded
+    tag: c15c7f1
     pullPolicy: IfNotPresent
 
 ingress:
