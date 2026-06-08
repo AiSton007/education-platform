@@ -148,6 +148,7 @@ services:
       DB_SCHEMA: tests
       DB_USER: ${TEST_DB_USER:-tests_user}
       DB_PASSWORD: ${TEST_DB_PASSWORD:-tests_pass_change_me}
+      LLM_ANALYZE_TIMEOUT_SECONDS: ${LLM_ANALYZE_TIMEOUT_SECONDS:-90}
     depends_on:
       postgres: { condition: service_healthy }
 
@@ -159,14 +160,14 @@ services:
       DB_SCHEMA: llm
       DB_USER: ${LLM_DB_USER:-llm_user}
       DB_PASSWORD: ${LLM_DB_PASSWORD:-llm_pass_change_me}
-      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gigachat}
       LLM_API_URL: ${LLM_API_URL:-https://gigachat.devices.sberbank.ru/api/v1}
       LLM_OAUTH_URL: ${LLM_OAUTH_URL:-https://ngw.devices.sberbank.ru:9443/api/v2/oauth}
       LLM_OAUTH_SCOPE: ${LLM_OAUTH_SCOPE:-GIGACHAT_API_PERS}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-GigaChat}
-      LLM_TIMEOUT_SECONDS: "30"
-      LLM_VERIFY_SSL: ${LLM_VERIFY_SSL:-true}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      LLM_VERIFY_SSL: ${LLM_VERIFY_SSL:-false}
     depends_on:
       postgres: { condition: service_healthy }
 

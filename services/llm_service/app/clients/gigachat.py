@@ -73,6 +73,7 @@ class GigaChatAnalyzer:
                 "GigaChat OAuth returned non-200",
                 details={"status": response.status_code, "body": response.text[:500]},
             )
+        _log.info("gigachat_oauth_ok")
         payload = response.json()
         self._token = str(payload["access_token"])
         if "expires_at" in payload:
@@ -128,6 +129,12 @@ class GigaChatAnalyzer:
                 details={"snippet": text[:500]},
             ) from exc
         result = _to_analysis_result(parsed, payload)
+        _log.info(
+            "gigachat_completion_ok",
+            attempt_id=str(payload.attempt_id),
+            overall_score=result.overall_score,
+            questions=len(result.per_question),
+        )
         return result, raw
 
 

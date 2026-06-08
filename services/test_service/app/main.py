@@ -23,7 +23,11 @@ def build_app() -> FastAPI:
     engine = build_engine(settings)
     deps.session_factory = build_session_factory(engine)
     deps.issuer = InternalIssuer(self_name=settings.app_name, settings=settings)
-    deps.llm_client = LlmServiceClient(base_url=settings.llm_service_url, issuer=deps.issuer)
+    deps.llm_client = LlmServiceClient(
+        base_url=settings.llm_service_url,
+        issuer=deps.issuer,
+        analyze_timeout_seconds=settings.llm_analyze_timeout_seconds,
+    )
     deps.report_client = ReportServiceClient(base_url=settings.report_service_url, issuer=deps.issuer)
     deps.user_client = UserServiceClient(base_url=settings.user_service_url, issuer=deps.issuer)
 

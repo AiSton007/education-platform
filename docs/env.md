@@ -60,7 +60,7 @@ chart `postgresql`).
 
 | Переменная             | Дефолт                                              |
 |------------------------|-----------------------------------------------------|
-| `LLM_PROVIDER`         | `mock`                                              |
+| `LLM_PROVIDER`         | `gigachat` (`mock` — офлайн без API)                |
 | `LLM_API_URL`          | `https://gigachat.devices.sberbank.ru/api/v1`       |
 | `LLM_OAUTH_URL`        | `https://ngw.devices.sberbank.ru:9443/api/v2/oauth` |
 | `LLM_OAUTH_SCOPE`      | `GIGACHAT_API_PERS`                                 |
@@ -70,6 +70,37 @@ chart `postgresql`).
 | `LLM_VERIFY_SSL`       | `true` (для prod нужен сертификат НУЦ Минцифры)     |
 
 Оценки LLM возвращаются в шкале **1..10** (мягкая проверка по смыслу, не дословно).
+
+### Kubernetes (GigaChat)
+
+1. Создайте Secret с ключом API (если `gigachat.secret.create: false` в values):
+
+   ```bash
+   kubectl -n app create secret generic gigachat-creds \
+     --from-literal=LLM_API_KEY='<Authorization Key из developers.sber.ru>'
+   ```
+
+2. В `deploy/charts/education-platform/values.yaml` для `llm-service`:
+   - `LLM_PROVIDER: gigachat`
+   - `LLM_VERIFY_SSL: "false"` (или `"true"` с сертификатом НУЦ Минцифры в образе)
+
+3. Для `test-service`: `LLM_ANALYZE_TIMEOUT_SECONDS: "90"` (≥ `LLM_TIMEOUT_SECONDS`).
+
+4. Пересоберите и задеплойте образы: `llm-service`, `test-service`, `report-service` (шкала 1–10).
+
+5. Проверка после submit теста:
+
+   ```bash
+   kubectl -n app logs deploy/llm-service --tail=20 | grep gigachat
+   kubectl -n database exec education-postgresql-0 -- psql -h 127.0.0.1 -U postgres -d education \
+     -c "SELECT provider, score, status FROM llm.analyses ORDER BY created_at DESC LIMIT 3;"
+   ```
+
+   Ожидается `provider = gigachat` и в логах `gigachat_oauth_ok`, `gigachat_completion_ok`.
+
+| Переменная (test-service)     | Дефолт | Описание                                      |
+|-------------------------------|--------|-----------------------------------------------|
+| `LLM_ANALYZE_TIMEOUT_SECONDS` | `90`   | таймаут HTTP test-service → llm-service       |
 
 ## URLs для service-to-service и api-gateway
 

@@ -12,6 +12,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+MIN_SCORE = 1.0
+MAX_SCORE = 10.0
+
 
 class TestSummaryIn(BaseModel):
     id: uuid.UUID
@@ -33,7 +36,7 @@ class ReportItemIn(BaseModel):
     text: str
     correct_answer: str
     user_answer: str | None = None
-    score: float = Field(ge=0.0, le=1.0, default=0.0)
+    score: float = Field(ge=MIN_SCORE, le=MAX_SCORE, default=MIN_SCORE)
     feedback: str | None = None
 
 
@@ -49,7 +52,7 @@ class ReportIn(BaseModel):
     attempt_id: uuid.UUID
     user_id: uuid.UUID
     analysis_id: uuid.UUID
-    score: float = Field(ge=0.0, le=1.0, default=0.0)
+    score: float = Field(ge=MIN_SCORE, le=MAX_SCORE, default=MIN_SCORE)
     test: TestSummaryIn
     participant: ParticipantIn
     items: list[ReportItemIn] = Field(default_factory=list)

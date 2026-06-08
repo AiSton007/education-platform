@@ -21,6 +21,9 @@ class TestServiceSettings(BaseAppSettings, DatabaseSettings, JWTSettings, Intern
     user_service_url: str = Field(
         default="http://user-service:8080", validation_alias="USER_SERVICE_URL"
     )
+    llm_analyze_timeout_seconds: float = Field(
+        default=90.0, validation_alias="LLM_ANALYZE_TIMEOUT_SECONDS"
+    )
 
 
 _settings: TestServiceSettings | None = None
