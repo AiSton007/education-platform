@@ -67,7 +67,8 @@ chart `postgresql`).
 | `LLM_API_KEY`          | Authorization Key из [кабинета GigaChat API](https://developers.sber.ru/) (передаётся в `Authorization: Basic …` при OAuth) |
 | `LLM_MODEL`            | `GigaChat`                                          |
 | `LLM_TIMEOUT_SECONDS`  | `30`                                                |
-| `LLM_VERIFY_SSL`       | `true` (для prod нужен сертификат НУЦ Минцифры)     |
+| `LLM_VERIFY_SSL`       | `true`                                              |
+| `LLM_CA_BUNDLE`        | путь к PEM bundle НУЦ Минцифры (в k8s: ConfigMap)   |
 
 Оценки LLM возвращаются в шкале **1..10** (мягкая проверка по смыслу, не дословно).
 

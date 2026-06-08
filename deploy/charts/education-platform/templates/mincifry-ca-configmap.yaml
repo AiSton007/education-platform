@@ -1,0 +1,12 @@
+{{- if .Values.gigachat.mincifryCa.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.gigachat.mincifryCa.configMapName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ep.labels" (dict "name" "mincifry-ca" "root" .) | nindent 4 }}
+data:
+  ca-bundle.crt: |
+{{ .Files.Get "files/certs/ca-bundle.crt" | nindent 4 }}
+{{- end }}

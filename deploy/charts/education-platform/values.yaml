@@ -27,6 +27,10 @@ gigachat:
     create: false
     name: gigachat-creds
     apiKey: ""
+  # Сертификаты НУЦ Минцифры для TLS к GigaChat (developers.sber.ru/docs/ru/gigachat/certificates)
+  mincifryCa:
+    enabled: true
+    configMapName: russian-trusted-ca
 
 defaults:
   replicaCount: 1
@@ -140,6 +144,14 @@ services:
     extraEnvFrom:
       - secretRef:
           name: gigachat-creds
+    extraVolumeMounts:
+      - name: mincifry-ca
+        mountPath: /etc/ssl/mincifry
+        readOnly: true
+    extraVolumes:
+      - name: mincifry-ca
+        configMap:
+          name: russian-trusted-ca
     resources:
       requests:
         cpu: 50m
@@ -156,8 +168,8 @@ services:
       LLM_OAUTH_SCOPE: GIGACHAT_API_PERS
       LLM_MODEL: GigaChat
       LLM_TIMEOUT_SECONDS: "60"
-      # true после пересборки education-python-base (сертификаты НУЦ Минцифры в Dockerfile.base-python)
       LLM_VERIFY_SSL: "true"
+      LLM_CA_BUNDLE: /etc/ssl/mincifry/ca-bundle.crt
 
   report-service:
     enabled: true

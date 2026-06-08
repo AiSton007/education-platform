@@ -27,6 +27,11 @@ class LlmServiceSettings(BaseAppSettings, DatabaseSettings, InternalJWTSettings)
     llm_model: str = Field(default="GigaChat", validation_alias="LLM_MODEL")
     llm_timeout_seconds: float = Field(default=30.0, validation_alias="LLM_TIMEOUT_SECONDS")
     llm_verify_ssl: bool = Field(default=True, validation_alias="LLM_VERIFY_SSL")
+    llm_ca_bundle: str = Field(
+        default="",
+        validation_alias="LLM_CA_BUNDLE",
+        description="Path to PEM CA bundle (e.g. НУЦ Минцифры). Overrides system store when set.",
+    )
 
 
 _settings: LlmServiceSettings | None = None

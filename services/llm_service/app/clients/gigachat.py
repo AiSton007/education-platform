@@ -32,6 +32,13 @@ from services.llm_service.app.scoring import MIN_SCORE, clamp_score
 _log = get_logger("llm-service.gigachat")
 
 
+def _ssl_verify(settings: LlmServiceSettings) -> bool | str:
+    bundle = settings.llm_ca_bundle.strip()
+    if bundle:
+        return bundle
+    return settings.llm_verify_ssl
+
+
 class GigaChatAnalyzer:
     name = "gigachat"
 
@@ -45,7 +52,7 @@ class GigaChatAnalyzer:
         self._token: str | None = None
         self._token_expires_at: float = 0.0
         self._client = httpx.AsyncClient(
-            timeout=settings.llm_timeout_seconds, verify=settings.llm_verify_ssl
+            timeout=settings.llm_timeout_seconds, verify=_ssl_verify(settings)
         )
 
     async def aclose(self) -> None:
