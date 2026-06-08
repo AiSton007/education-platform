@@ -1,15 +1,12 @@
 # ruff: noqa: RUF001
-"""GigaChat LLM provider.
+"""GigaChat LLM provider (REST API, same flow as developers.sber.ru docs).
 
-Implements the two-step flow:
+1. POST ``LLM_OAUTH_URL`` — ``Authorization: Basic <Authorization Key>``,
+   ``scope=GIGACHAT_API_PERS``, header ``RqUID`` → ``access_token`` (≈30 min).
+2. POST ``{LLM_API_URL}/chat/completions`` — ``Authorization: Bearer <token>``,
+   prompt → JSON with per-question scores 1..10 and recommendations.
 
-1. POST to ``LLM_OAUTH_URL`` with ``Authorization: Basic <client_id:client_secret>`` and
-   ``scope=GIGACHAT_API_PERS`` body to obtain a short-lived access token.
-2. POST ``/chat/completions`` to ``LLM_API_URL`` with ``Authorization: Bearer <token>`` and a
-   prompt that instructs the model to return strict JSON (per-question scores 0.0..1.0
-   plus recommendations).
-
-The response is parsed as JSON (best effort) and mapped to :class:`AnalysisResult`.
+``LLM_API_KEY`` = Authorization Key from the Sber developer cabinet (not Client ID).
 """
 
 from __future__ import annotations
@@ -24,6 +21,7 @@ import httpx
 from pkg.errors import UpstreamError
 from pkg.logger import get_logger
 from services.llm_service.app.config import LlmServiceSettings
+from services.llm_service.app.scoring import MIN_SCORE, clamp_score
 from services.llm_service.app.schemas import (
     AnalysisResult,
     AnalyzeIn,
@@ -38,6 +36,11 @@ class GigaChatAnalyzer:
     name = "gigachat"
 
     def __init__(self, settings: LlmServiceSettings) -> None:
+        if not settings.llm_api_key.strip():
+            raise ValueError(
+                "LLM_API_KEY is required when LLM_PROVIDER=gigachat "
+                "(Authorization Key from developers.sber.ru)"
+            )
         self._settings = settings
         self._token: str | None = None
         self._token_expires_at: float = 0.0
@@ -86,9 +89,10 @@ class GigaChatAnalyzer:
                 {
                     "role": "system",
                     "content": (
-                        "Ты помощник аналитики результатов тестирования сотрудников. "
-                        "Сравнивай свободные ответы пользователей с правильными ответами по смыслу. "
-                        "Будь мягким, но честным. Отвечай ТОЛЬКО валидным JSON в указанной схеме."
+                        "Ты наставник, проверяющий ответы сотрудников на корпоративные тесты. "
+                        "Оценивай смысловую близость, не дословное совпадение. "
+                        "Шкала: 1–10 баллов за вопрос. Не будь строгим. "
+                        "Отвечай ТОЛЬКО валидным JSON без markdown."
                     ),
                 },
                 {"role": "user", "content": prompt},
@@ -145,22 +149,23 @@ def _to_analysis_result(parsed: dict[str, Any], payload: AnalyzeIn) -> AnalysisR
         per_question.append(
             PerQuestionScore(
                 question_id=qid,
-                score=float(item.get("score", 0.0)),
+                score=clamp_score(item.get("score", MIN_SCORE)),
                 feedback=item.get("feedback"),
             )
         )
 
-    # Fallback: ensure every question has a score (default 0.0 if the model skipped it).
+    # Fallback: ensure every question has a score (minimum 1 if the model skipped it).
     scored_ids = {p.question_id for p in per_question}
     for q in payload.questions:
         if q.id not in scored_ids:
-            per_question.append(PerQuestionScore(question_id=q.id, score=0.0))
+            per_question.append(PerQuestionScore(question_id=q.id, score=MIN_SCORE))
 
     overall = parsed.get("overall_score")
     if overall is None and per_question:
         overall = round(sum(p.score for p in per_question) / len(per_question), 1)
     elif overall is None:
-        overall = 0.0
+        overall = MIN_SCORE
+    overall = clamp_score(overall)
 
     recommendations = [
         Recommendation(

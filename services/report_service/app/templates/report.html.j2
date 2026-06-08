@@ -39,7 +39,7 @@
     {% if participant.position %}<div><strong>Должность:</strong> {{ participant.position }}</div>{% endif %}
     <div><strong>Дата:</strong> {{ report.created_at.strftime('%Y-%m-%d %H:%M') if report.created_at else "" }}</div>
     <div style="margin-top: 6pt;"><strong>Итоговая оценка:</strong>
-      <span class="pill">{{ "%.1f"|format(report.score) }} / 1.0</span>
+      <span class="pill">{{ "%.1f"|format(report.score) }} / 10</span>
     </div>
   </div>
 

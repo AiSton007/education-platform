@@ -50,15 +50,13 @@ async def test_mock_returns_per_question_scores_in_range() -> None:
     assert raw["provider"] == "mock"
     assert len(result.per_question) == 2
     for score in result.per_question:
-        assert 0.0 <= score.score <= 1.0
-        rounded = round(score.score * 10) / 10
-        assert score.score == rounded, "scores must be in 0.1 steps"
+        assert 1.0 <= score.score <= 10.0
 
     perfect = result.per_question[0].score
     empty = result.per_question[1].score
     assert perfect > empty
-    assert empty == 0.0
-    assert 0.0 <= result.overall_score <= 1.0
+    assert empty == 1.0
+    assert 1.0 <= result.overall_score <= 10.0
 
 
 @pytest.mark.asyncio

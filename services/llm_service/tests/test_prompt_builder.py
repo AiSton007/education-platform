@@ -38,3 +38,4 @@ def test_build_prompt_includes_correct_answer_and_user_answer() -> None:
     assert '"per_question"' in prompt
     assert '"overall_score"' in prompt
     assert '"recommendations"' in prompt
+    assert "1 до 10" in prompt or "1–10" in prompt

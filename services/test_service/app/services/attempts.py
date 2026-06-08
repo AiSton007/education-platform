@@ -98,7 +98,7 @@ class AttemptsService:
                 result_data = analysis.get("result") or {}
                 per_question = result_data.get("per_question", []) or []
                 overall_score = _coerce_score(
-                    result_data.get("overall_score", analysis.get("score", 0.0))
+                    result_data.get("overall_score", analysis.get("score", 1.0))
                 )
 
                 await self._attempts.update_answer_scores(attempt.id, per_question)
@@ -228,7 +228,7 @@ class AttemptsService:
                     "text": q.text,
                     "correct_answer": q.correct_answer,
                     "user_answer": ans.free_text if ans is not None else None,
-                    "score": _coerce_score(pq.get("score", 0.0)),
+                    "score": _coerce_score(pq.get("score", 1.0)),
                     "feedback": pq.get("feedback"),
                 }
             )
@@ -267,10 +267,10 @@ def _question_payload(q: Question) -> dict:
 
 
 def _coerce_score(value: object) -> float:
-    """Clamp the score to [0.0, 1.0] and round to one decimal."""
+    """Clamp the score to [1.0, 10.0] and round to one decimal."""
     try:
         score = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
-        return 0.0
-    score = max(0.0, min(1.0, score))
+        return 1.0
+    score = max(1.0, min(10.0, score))
     return round(score, 1)

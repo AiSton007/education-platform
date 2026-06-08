@@ -83,7 +83,7 @@ export function ManagerAttemptDetailPage() {
         <div>
           <strong>Итоговая оценка:</strong>{" "}
           {attempt.score === null ? "—" : (
-            <span className="pill">{attempt.score.toFixed(1)} / 1.0</span>
+            <span className="pill">{attempt.score.toFixed(1)} / 10</span>
           )}
         </div>
       </div>

@@ -42,7 +42,7 @@ export function AttemptResultPage() {
         <div>
           <strong>Итоговая оценка:</strong>{" "}
           {attempt.score === null ? "пока недоступна" : (
-            <span className="pill">{attempt.score.toFixed(1)} / 1.0</span>
+            <span className="pill">{attempt.score.toFixed(1)} / 10</span>
           )}
         </div>
         {status === "failed" && attempt.error && (

@@ -135,7 +135,7 @@ class Attempt(Base):
         default=AttemptStatus.STARTED,
         nullable=False,
     )
-    # Overall score in 0.0..1.0 range (one decimal).
+    # Overall score in 1.0..10.0 range (one decimal).
     score: Mapped[float | None] = mapped_column(Numeric(3, 2), nullable=True)
     report_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     analysis_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

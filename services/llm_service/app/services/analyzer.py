@@ -25,11 +25,9 @@ _log = get_logger("llm-service.analyzer")
 def build_prompt(payload: AnalyzeIn) -> str:
     """Render the LLM prompt for free-form question grading.
 
-    The LLM is asked to compare each user's answer with the manager-provided correct answer
-    and to return a per-question score in the 0.0..1.0 range (with 0.1 precision). It is
-    explicitly instructed to be lenient and to grade by semantic similarity, not literal
-    string match. After scoring, it must produce concise study recommendations for the
-    weakest topics. The schema is strict JSON so the response can be parsed safely.
+    The LLM compares each user answer with the manager-provided correct answer and returns
+    a per-question score on a 1..10 scale. Grading is lenient (semantic similarity, not
+    literal match). Study recommendations are generated for weak topics. Response is strict JSON.
     """
 
     answers_by_question = {a.question_id: a for a in payload.answers}
@@ -49,9 +47,9 @@ def build_prompt(payload: AnalyzeIn) -> str:
 
     schema = (
         "{\n"
-        '  "per_question": [ {"question_id": "<uuid>", "score": 0.0, '
+        '  "per_question": [ {"question_id": "<uuid>", "score": 7, '
         '"feedback": "краткое пояснение"} ],\n'
-        '  "overall_score": 0.0,\n'
+        '  "overall_score": 7.5,\n'
         '  "recommendations": [ {"topic": "...", "reason": "...", '
         '"resource_url": null} ]\n'
         "}"
@@ -63,18 +61,19 @@ def build_prompt(payload: AnalyzeIn) -> str:
         "---\n"
         f"{''.join(rendered_items)}"
         "---\n"
-        "Ты — мягкий, но честный экзаменатор. По каждому вопросу сравни ответ пользователя "
-        "(user_answer) с правильным ответом (correct_answer). Оценивай смысловую близость, "
-        "а не буквальное совпадение. Не будь чрезмерно строгим: частично верные, синонимичные "
-        "и переформулированные ответы должны получать высокие оценки. "
-        "Оценка по каждому вопросу — число от 0.0 до 1.0 с шагом 0.1 (0.0, 0.1, ..., 1.0). "
-        "Подсчитай overall_score как среднее арифметическое per_question.score, округлённое "
-        "до одного знака после запятой. "
-        "Сформируй краткие рекомендации к изучению на основе тем тех вопросов, где пользователь "
-        "получил низкую оценку (score < 0.7). Рекомендации должны быть понятными и опираться "
-        "на конкретную слабость пользователя. "
-        "Если пользователь не ответил — поставь 0.0. "
-        f"Верни СТРОГО валидный JSON в следующей схеме, без пояснений: {schema}"
+        "Ты — доброжелательный наставник, проверяющий знания сотрудника. "
+        "По каждому вопросу сравни ответ пользователя (user_answer) с эталоном (correct_answer). "
+        "Оценивай смысловую близость, а не дословное совпадение. "
+        "Не будь строгим: частично верные, синонимичные и переформулированные ответы "
+        "должны получать достойные баллы. "
+        "Шкала оценки по каждому вопросу: от 1 до 10 (допускается один знак после запятой). "
+        "Ориентиры: 9–10 — отлично, 7–8 — хорошо, 5–6 — частично верно, 3–4 — слабо, "
+        "1–2 — ответ отсутствует или не по теме. "
+        "overall_score — среднее арифметическое per_question.score, округлённое до одного знака. "
+        "Сформируй 2–5 рекомендаций к изучению для вопросов с оценкой ниже 6: "
+        "укажи тему, причину и что именно повторить (документация, инструкции, материалы). "
+        "Если пользователь не ответил — поставь 1. "
+        f"Верни СТРОГО валидный JSON в следующей схеме, без пояснений вне JSON: {schema}"
     )
 
 

@@ -64,10 +64,12 @@ chart `postgresql`).
 | `LLM_API_URL`          | `https://gigachat.devices.sberbank.ru/api/v1`       |
 | `LLM_OAUTH_URL`        | `https://ngw.devices.sberbank.ru:9443/api/v2/oauth` |
 | `LLM_OAUTH_SCOPE`      | `GIGACHAT_API_PERS`                                 |
-| `LLM_API_KEY`          | base64(`client_id:client_secret`)                   |
+| `LLM_API_KEY`          | Authorization Key из [кабинета GigaChat API](https://developers.sber.ru/) (передаётся в `Authorization: Basic …` при OAuth) |
 | `LLM_MODEL`            | `GigaChat`                                          |
 | `LLM_TIMEOUT_SECONDS`  | `30`                                                |
-| `LLM_VERIFY_SSL`       | `true`                                              |
+| `LLM_VERIFY_SSL`       | `true` (для prod нужен сертификат НУЦ Минцифры)     |
+
+Оценки LLM возвращаются в шкале **1..10** (мягкая проверка по смыслу, не дословно).
 
 ## URLs для service-to-service и api-gateway
 

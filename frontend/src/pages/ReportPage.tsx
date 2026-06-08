@@ -67,7 +67,7 @@ export function ReportPage() {
         )}
         <div>
           <strong>Итоговая оценка:</strong>{" "}
-          <span className="pill">{report.score.toFixed(1)} / 1.0</span>
+          <span className="pill">{report.score.toFixed(1)} / 10</span>
         </div>
       </div>
 
