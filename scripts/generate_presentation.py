@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001, E501
 """
 Generate diploma presentation PDF.
 
@@ -10,8 +11,6 @@ Output:
 
 from __future__ import annotations
 
-import os
-import sys
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -20,7 +19,6 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as pdf_canvas
-from reportlab.platypus import Table, TableStyle
 
 # ─── Page geometry ─────────────────────────────────────────────────────────────
 PAGE_W, PAGE_H = landscape(A4)   # 841.89 x 595.28 pt
@@ -372,7 +370,7 @@ def slide_03_infra(c, n, total):
     node_w, node_h = 13 * mm, 10 * mm
     node_labels = [("control1", ".171"), ("worker1", ".174"), ("worker2", ".175"), ("worker3", ".176")]
     dns_mid_x = MARGIN + 8 * mm + (lw - 16 * mm) / 2
-    for i, (nx, (lbl, sub)) in enumerate(zip(node_xs, node_labels)):
+    for i, (nx, (lbl, sub)) in enumerate(zip(node_xs, node_labels, strict=True)):
         mid_x = nx + node_w / 2
         c.setStrokeColor(C_BORDER)
         c.line(dns_mid_x if i == 0 else dns_mid_x + (i - 1.5) * 14 * mm,
@@ -789,7 +787,7 @@ def slide_11_cicd(c, n, total):
     gap = sw * 0.2
     sy = y - 2 * mm
     sh = 14 * mm
-    for i, (lbl, sub) in enumerate(stages):
+    for i, (lbl, _sub) in enumerate(stages):
         sx = MARGIN + i * (sw + gap)
         acc = (i == 0 or i == 6)
         _svg_box(c, sx, sy - sh, sw, sh, lbl.replace("\n", " "), accent=acc)

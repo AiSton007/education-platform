@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import re
 
-from services.llm_service.app.scoring import WEAK_SCORE_THRESHOLD, clamp_score
 from services.llm_service.app.schemas import (
     AnalysisResult,
     AnalyzeIn,
     PerQuestionScore,
     Recommendation,
 )
+from services.llm_service.app.scoring import WEAK_SCORE_THRESHOLD, clamp_score
 
 _WORD_RE = re.compile(r"[\w\-]+", re.UNICODE)
 

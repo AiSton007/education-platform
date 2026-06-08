@@ -21,13 +21,13 @@ import httpx
 from pkg.errors import UpstreamError
 from pkg.logger import get_logger
 from services.llm_service.app.config import LlmServiceSettings
-from services.llm_service.app.scoring import MIN_SCORE, clamp_score
 from services.llm_service.app.schemas import (
     AnalysisResult,
     AnalyzeIn,
     PerQuestionScore,
     Recommendation,
 )
+from services.llm_service.app.scoring import MIN_SCORE, clamp_score
 
 _log = get_logger("llm-service.gigachat")
 

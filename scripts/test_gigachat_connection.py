@@ -1,3 +1,4 @@
+# ruff: noqa: RUF001
 """
 Проверка подключения к GigaChat API (как в документации developers.sber.ru).
 
