@@ -27,4 +27,11 @@ RUN apt-get update \
         tini \
     && rm -rf /var/lib/apt/lists/*
 
+# НУЦ Минцифры — обязателен для HTTPS к GigaChat API (developers.sber.ru/docs/ru/gigachat/certificates)
+RUN curl -fsSL "https://gu-st.ru/content/lending/russian_trusted_root_ca_pem.crt" \
+        -o /usr/local/share/ca-certificates/russian-trusted-root.crt \
+    && curl -fsSL "https://gu-st.ru/content/lending/russian_trusted_sub_ca_pem.crt" \
+        -o /usr/local/share/ca-certificates/russian-trusted-sub.crt \
+    && update-ca-certificates
+
 RUN pip install --no-cache-dir uv==0.5.4

@@ -156,8 +156,8 @@ services:
       LLM_OAUTH_SCOPE: GIGACHAT_API_PERS
       LLM_MODEL: GigaChat
       LLM_TIMEOUT_SECONDS: "60"
-      # false без сертификата НУЦ Минцифры в образе; true — для prod с установленным CA
-      LLM_VERIFY_SSL: "false"
+      # true после пересборки education-python-base (сертификаты НУЦ Минцифры в Dockerfile.base-python)
+      LLM_VERIFY_SSL: "true"
 
   report-service:
     enabled: true

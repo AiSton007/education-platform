@@ -80,15 +80,32 @@ chart `postgresql`).
      --from-literal=LLM_API_KEY='<Authorization Key из developers.sber.ru>'
    ```
 
-2. В `deploy/charts/education-platform/values.yaml` для `llm-service`:
+2. Установите сертификаты НУЦ Минцифры **в образ контейнера** (на нодах k8s недостаточно — pod использует свой CA store):
+   - в репозитории они добавляются в `Dockerfile.base-python` (корневой + выпускающий с gu-st.ru);
+   - пересоберите `education-python-base` в Harbor (Jenkins делает это при изменении `Dockerfile.base-python`);
+   - пересоберите `llm-service` на новом base-образе.
+
+3. В `deploy/charts/education-platform/values.yaml` для `llm-service`:
    - `LLM_PROVIDER: gigachat`
-   - `LLM_VERIFY_SSL: "false"` (или `"true"` с сертификатом НУЦ Минцифры в образе)
+   - `LLM_VERIFY_SSL: "true"`
 
-3. Для `test-service`: `LLM_ANALYZE_TIMEOUT_SECONDS: "90"` (≥ `LLM_TIMEOUT_SECONDS`).
+4. Для `test-service`: `LLM_ANALYZE_TIMEOUT_SECONDS: "90"` (≥ `LLM_TIMEOUT_SECONDS`).
 
-4. Пересоберите и задеплойте образы: `llm-service`, `test-service`, `report-service` (шкала 1–10).
+5. Пересоберите и задеплойте образы: `education-python-base`, `llm-service`, `test-service`, `report-service`.
 
-5. Проверка после submit теста:
+6. Проверка TLS из pod llm-service:
+
+   ```bash
+   kubectl -n app exec deploy/llm-service -- python -c "
+   import httpx
+   r = httpx.get('https://ngw.devices.sberbank.ru:9443/', timeout=15)
+   print('TLS OK', r.status_code)
+   "
+   ```
+
+   Без сертификатов будет `[SSL: CERTIFICATE_VERIFY_FAILED]`.
+
+7. Проверка после submit теста:
 
    ```bash
    kubectl -n app logs deploy/llm-service --tail=20 | grep gigachat

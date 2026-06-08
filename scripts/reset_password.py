@@ -1,4 +1,4 @@
-# ruff: noqa: RUF001
+# ruff: noqa: RUF001, RUF002
 """
 Сброс пароля пользователя (bcrypt, как в auth-service).
 
@@ -177,7 +177,7 @@ def main() -> int:
     except httpx.HTTPStatusError as exc:
         print(f"HTTP ошибка: {exc.response.status_code} {exc.response.text}")
         return 1
-    except Exception as exc:  # noqa: BLE001 — CLI script
+    except Exception as exc:
         print(f"Ошибка: {exc}")
         return 1
 
